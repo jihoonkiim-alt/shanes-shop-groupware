@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shane's Online Shop — Management</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -101,7 +102,7 @@ tr:hover td{background:var(--bg)}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:flex-start;padding:40px 20px;overflow-y:auto;min-height:100vh}
 .modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:32px 36px;width:100%;max-width:100%;margin:0 auto;position:relative}
+.modal{background:#fff;border-radius:16px;padding:32px 36px;width:100%;max-width:100%;margin:0 auto;position:relative;min-height:50vh}
 .modal-lg{max-width:100%}
 .mth{margin-bottom:20px}
 .mth .mk{font-size:13px;color:var(--text3);margin-top:4px}
@@ -222,7 +223,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- DASHBOARD -->
 <div class="sec active" id="tab-dash">
-  <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><button class="btn" onclick="syncFromSheets()">↻ Sync Sheets</button></div>
+  <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><div class="btn-row"><button class="btn" onclick="syncFromSheets()">↻ Sync Sheets</button><button class="btn" onclick="dlAll()">⬇ Download All (.xlsx)</button></div></div>
   <div class="stats" id="dash-stats"></div>
   <div class="two-col">
     <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
@@ -236,7 +237,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- INVENTORY -->
 <div class="sec" id="tab-inventory">
-  <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button></div></div>
+  <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button><button class="btn" onclick="dlInventory()">⬇ .xlsx</button></div></div>
   <div class="stats" id="inv-stats"></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div></div>
     <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Price</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Level</span><span class="tk">재고율</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
@@ -246,7 +247,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- SALES & BILLING -->
 <div class="sec" id="tab-sales">
-  <div class="ph"><div><div class="pte">Sales & Billing Management</div><div class="ptk">매출 · 청구 관리</div></div><button class="btn btn-p" onclick="openModal('modal-order')">+ New Order</button></div>
+  <div class="ph"><div><div class="pte">Sales & Billing Management</div><div class="ptk">매출 · 청구 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-order')">+ New Order</button><button class="btn" onclick="dlSales()">⬇ .xlsx</button></div></div>
   <div class="stats" id="sales-stats"></div>
   <div class="card"><div class="ch">
     <div><div class="ce">Order List</div><div class="ck">주문 목록</div></div>
@@ -264,6 +265,7 @@ tr:hover td{background:var(--bg)}
     <div class="btn-row">
       <select id="fin-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderFinance()"></select>
       <button class="btn btn-p" onclick="openModal('modal-expense')">+ Add Expense</button>
+      <button class="btn" onclick="dlFinance()">⬇ .xlsx</button>
     </div>
   </div>
   <div class="stats" id="fin-stats"></div>
@@ -286,11 +288,11 @@ tr:hover td{background:var(--bg)}
 
 <!-- CUSTOMERS -->
 <div class="sec" id="tab-customers">
-  <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button></div>
+  <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button><button class="btn" onclick="dlCustomers()">⬇ .xlsx</button></div></div>
   <div class="search-wrap"><input type="text" placeholder="Search by name..." oninput="renderCustomers(this.value)"></div>
   <div class="card"><table><thead><tr>
     <th><span class="te">Customer</span><span class="tk">고객명</span></th>
-    <th><span class="te">Contact</span><span class="tk">연락처</span></th>
+    <th><span class="te">Contact / Address</span><span class="tk">연락처 / 주소</span></th>
     <th><span class="te">Type</span><span class="tk">고객유형</span></th>
     <th><span class="te">Payment</span><span class="tk">결제방식</span></th>
     <th><span class="te">This Month</span><span class="tk">이달 주문액</span></th>
@@ -307,6 +309,7 @@ tr:hover td{background:var(--bg)}
     <div class="btn-row">
       <select id="inv-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderInvoices()"></select>
       <span style="font-size:11px;color:var(--text3)">Click customer name to expand details</span>
+      <button class="btn" onclick="dlInvoices()">⬇ .xlsx</button>
     </div>
   </div>
   <div class="stats" id="inv-stats"></div>
@@ -315,7 +318,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- CALENDAR -->
 <div class="sec" id="tab-calendar">
-  <div class="ph"><div><div class="pte">Calendar &amp; Schedule</div><div class="ptk">캘린더</div></div><button class="btn btn-p" onclick="openModal('modal-event')">+ Add Event</button></div>
+  <div class="ph"><div><div class="pte">Calendar &amp; Schedule</div><div class="ptk">캘린더</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-event')">+ Add Event</button><button class="btn" onclick="dlCalendar()">⬇ .xlsx</button></div></div>
   <div class="cal-wrap">
     <div class="cal-hd">
       <div style="display:flex;align-items:center;gap:8px">
@@ -1088,7 +1091,7 @@ function renderCustomers(q){
     const creditWarn=c.creditLimit>0&&out>c.creditLimit?` <span style="color:var(--red);font-size:9px">⚠ Over limit</span>`:'';
     return`<tr>
       <td><strong>${c.name}</strong>${c.sns?`<br><span style="font-size:9px;color:var(--blue)">${c.sns}</span>`:''}${c.note?`<br><span style="font-size:10px;color:var(--text3)">${c.note}</span>`:''}</td>
-      <td style="color:var(--text2);font-size:11px">${c.contact||'—'}</td>
+      <td style="font-size:11px"><div style="color:var(--text2)">${c.contact||'—'}</div>${c.address?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${c.address}</div>`:''}</td>
       <td>${ctBadge(c.type||'retail')}</td>
       <td>${pBadge(c.payment)}</td>
       <td class="mono">${won(ma)}</td>
@@ -1140,6 +1143,103 @@ function setDateHeader(){
   const n=new Date();
   document.getElementById('date-ko').textContent=n.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
   document.getElementById('date-en').textContent=n.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+}
+
+/* ── XLSX DOWNLOAD ─────────────────────────────────────────────────────── */
+function xlsxDownload(sheets, filename){
+  if(typeof XLSX==='undefined'){toast('⚠ Loading library, try again');return}
+  const wb=XLSX.utils.book_new();
+  sheets.forEach(({name,data})=>{
+    const ws=XLSX.utils.json_to_sheet(data.length?data:[{note:'No data'}]);
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  });
+  XLSX.writeFile(wb,filename);
+}
+function fmtDate(){return new Date().toISOString().slice(0,10)}
+function ordersFlat(){
+  return orders.map(o=>{
+    const c=getC(o.customerId);const p=getP(o.productId);
+    return{Date:o.date,Customer:c?c.name:'?',Type:o.type,Item:o.desc,Platform:o.platform||'',
+      OrderNo:o.receiptNo||'',Qty:o.qty,'Cost(₩)':o.cost,'Shipping(₩)':o.shippingCost||0,
+      'Charged(₩)':o.charge,'Profit(₩)':Number(o.charge)-Number(o.cost||0)-Number(o.shippingCost||0),
+      Payment:o.payment,ProxyStatus:o.proxyStatus||'',Note:o.note||''};
+  });
+}
+function dlAll(){
+  xlsxDownload([
+    {name:'Orders',data:ordersFlat()},
+    {name:'Customers',data:customers.map(c=>({ID:c.id,Name:c.name,Contact:c.contact,Address:c.address||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'Outstanding(₩)':c.outstanding||0,Note:c.note||''}))},
+    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'Price(₩)':p.price,Stock:p.stock,MinStock:p.minStock,Note:p.note||''}))},
+    {name:'StockMovements',data:inouts.map(io=>{const p=getP(io.productId);return{Date:io.date,Product:p?p.name:'?',Type:io.type,Qty:io.qty,Note:io.note||''}})},
+    {name:'Expenses',data:expenses.map(e=>({Date:e.date,Type:e.type,'Amount(₩)':e.amount,Note:e.note||''}))},
+    {name:'Events',data:events.map(e=>({Date:e.date,Title:e.en||e.ko,Korean:e.ko,Type:e.type}))},
+  ],`shanes-shop-all-${fmtDate()}.xlsx`);
+  toast('✓ Downloaded: All data');
+}
+function dlInventory(){
+  xlsxDownload([
+    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'Price(₩)':p.price,Stock:p.stock,MinStock:p.minStock,'Value(₩)':p.stock*p.price,Note:p.note||''}))},
+    {name:'StockMovements',data:inouts.map(io=>{const p=getP(io.productId);return{Date:io.date,Product:p?p.name:'?',Type:io.type,Qty:io.qty,Note:io.note||''}})},
+  ],`shanes-inventory-${fmtDate()}.xlsx`);
+  toast('✓ Downloaded: Inventory');
+}
+function dlSales(){
+  const month=document.getElementById('month-filter')?.value||nowYM();
+  const filtered=orders.filter(o=>o.date&&o.date.startsWith(month));
+  xlsxDownload([
+    {name:'Orders',data:filtered.length?filtered.map(o=>{const c=getC(o.customerId);return{Date:o.date,Customer:c?c.name:'?',Item:o.desc,Type:o.type,Platform:o.platform||'',OrderNo:o.receiptNo||'',Qty:o.qty,'Cost(₩)':o.cost,'Shipping(₩)':o.shippingCost||0,'Charged(₩)':o.charge,'Profit(₩)':Number(o.charge)-Number(o.cost||0)-Number(o.shippingCost||0),Payment:o.payment,Status:o.proxyStatus||'',Note:o.note||''}}):[]},
+  ],`shanes-sales-${month}.xlsx`);
+  toast('✓ Downloaded: Sales & Billing');
+}
+function dlFinance(){
+  const month=document.getElementById('fin-month')?.value||nowYM();
+  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
+  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(month));
+  const revenue=mo.reduce((s,o)=>s+Number(o.charge),0);
+  const cogs=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
+  const expTotal=moExp.reduce((s,e)=>s+Number(e.amount),0);
+  xlsxDownload([
+    {name:'P&L Summary',data:[
+      {Item:'Revenue (매출)',Amount:revenue},
+      {Item:'Cost of Goods (원가+배송비)',Amount:-cogs},
+      {Item:'Business Expenses (경비)',Amount:-expTotal},
+      {Item:'Net Profit (순이익)',Amount:revenue-cogs-expTotal},
+    ]},
+    {name:'Expenses',data:moExp.map(e=>({Date:e.date,Type:e.type,'Amount(₩)':e.amount,Note:e.note||''}))},
+    {name:'Orders',data:mo.map(o=>{const c=getC(o.customerId);return{Date:o.date,Customer:c?c.name:'?',Item:o.desc,'Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge}})},
+  ],`shanes-finance-${month}.xlsx`);
+  toast('✓ Downloaded: Finance & Tax');
+}
+function dlCustomers(){
+  xlsxDownload([
+    {name:'Customers',data:customers.map(c=>{
+      const mo=thisMO().filter(o=>o.customerId==c.id).reduce((s,o)=>s+Number(o.charge),0);
+      return{ID:c.id,Name:c.name,Contact:c.contact||'',Address:c.address||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'ThisMonth(₩)':mo,'Outstanding(₩)':c.outstanding||0,Note:c.note||''};
+    })},
+  ],`shanes-customers-${fmtDate()}.xlsx`);
+  toast('✓ Downloaded: Customers');
+}
+function dlInvoices(){
+  const month=document.getElementById('inv-month')?.value||nowYM();
+  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
+  const rows=[];
+  customers.forEach(c=>{
+    const cOrders=mo.filter(o=>o.customerId==c.id);
+    if(!cOrders.length)return;
+    cOrders.forEach(o=>{
+      rows.push({Month:month,Customer:c.name,Contact:c.contact||'',Address:c.address||'',Date:o.date,Item:o.desc,Type:o.type,Platform:o.platform||'','Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge,Payment:o.payment,Status:o.proxyStatus||''});
+    });
+    rows.push({Month:'',Customer:'',Contact:'',Address:'',Date:'',Item:'SUBTOTAL — '+c.name,Type:'','Cost(₩)':cOrders.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0),'Charged(₩)':cOrders.reduce((s,o)=>s+Number(o.charge),0),Payment:'',Status:''});
+    rows.push({});
+  });
+  xlsxDownload([{name:'Invoices',data:rows}],`shanes-invoices-${month}.xlsx`);
+  toast('✓ Downloaded: Invoices');
+}
+function dlCalendar(){
+  xlsxDownload([
+    {name:'Events',data:events.sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({Date:e.date,Title:e.en||e.ko,Korean:e.ko,Category:e.type}))},
+  ],`shanes-calendar-${fmtDate()}.xlsx`);
+  toast('✓ Downloaded: Calendar');
 }
 
 seed();initCal();setDateHeader();
