@@ -342,7 +342,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- CUSTOMERS -->
 <div class="sec" id="tab-customers">
-  <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button><button class="btn" onclick="dlCustomers()">⬇ .xlsx</button></div></div>
+  <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button><button class="btn" id="push-customers-btn" onclick="pushCustomersToSheets()">↑ Push to Sheets</button><button class="btn" onclick="dlCustomers()">⬇ .xlsx</button></div></div>
   <label class="dropzone" id="import-dropzone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)" onclick="document.getElementById('import-file').click()">
     <input type="file" id="import-file" accept=".json" onchange="importCustomersJSON(this)">
     <div class="dz-icon">📂</div>
@@ -758,6 +758,22 @@ function closeModal(id){
   ov.removeAttribute('style');
   document.body.style.overflow='';
   document.documentElement.style.overflow='';
+}
+
+/* ── CUSTOMER PUSH TO SHEETS ────────────────────────────────────────────── */
+async function pushCustomersToSheets(){
+  if(!SCRIPT_URL){toast('⚠ Connect Google Sheets first');return}
+  if(!customers.length){toast('⚠ No customers to push');return}
+  const btn=document.getElementById('push-customers-btn');
+  btn.textContent='Uploading...';btn.disabled=true;
+  try{
+    const formData=new URLSearchParams();
+    formData.append('data',JSON.stringify({action:'bulkWrite',sheet:'Customers',rows:customers}));
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
+    toast(`✓ ${customers.length} customers sent — syncing...`);
+    setTimeout(()=>syncFromSheets(),3000);
+  }catch(e){toast('⚠ Push failed: '+e.message)}
+  finally{btn.textContent='↑ Push to Sheets';btn.disabled=false}
 }
 
 /* ── CUSTOMER IMPORT ────────────────────────────────────────────────────── */
