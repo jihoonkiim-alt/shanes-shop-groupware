@@ -180,6 +180,12 @@ tr:hover td{background:var(--bg)}
 .stock-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:2px}
 .stock-fill{height:100%;border-radius:2px}
 .stock-pct{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace}
+.dropzone{border:2px dashed var(--border2);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:var(--surface);margin-bottom:14px}
+.dropzone:hover,.dropzone.drag-over{border-color:var(--accent);background:var(--al)}
+.dropzone input[type=file]{display:none}
+.dropzone .dz-icon{font-size:28px;margin-bottom:6px}
+.dropzone .dz-t{font-size:13px;font-weight:600;color:var(--text2)}
+.dropzone .dz-s{font-size:11px;color:var(--text3);margin-top:3px}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:10px 18px;border-radius:10px;font-size:12px;z-index:99999;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
 /* INVOICE */
@@ -337,6 +343,12 @@ tr:hover td{background:var(--bg)}
 <!-- CUSTOMERS -->
 <div class="sec" id="tab-customers">
   <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button><button class="btn" onclick="dlCustomers()">⬇ .xlsx</button></div></div>
+  <label class="dropzone" id="import-dropzone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)" onclick="document.getElementById('import-file').click()">
+    <input type="file" id="import-file" accept=".json" onchange="importCustomersJSON(this)">
+    <div class="dz-icon">📂</div>
+    <div class="dz-t">Import Customers JSON</div>
+    <div class="dz-s">Drop .json file here or click to browse &nbsp;·&nbsp; Format: {"customers":[...]}</div>
+  </label>
   <div class="search-wrap"><input type="text" placeholder="Search by name..." oninput="renderCustomers(this.value)"></div>
   <div class="card"><table><thead><tr>
     <th><span class="te">Customer</span><span class="tk">고객명</span></th>
@@ -746,6 +758,47 @@ function closeModal(id){
   ov.removeAttribute('style');
   document.body.style.overflow='';
   document.documentElement.style.overflow='';
+}
+
+/* ── CUSTOMER IMPORT ────────────────────────────────────────────────────── */
+function importCustomersJSON(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(Array.isArray(data.customers)&&data.customers.length){
+        customers=data.customers;LS.set('customers',customers);
+        renderCustomers('');
+        toast(`✓ ${customers.length} customers imported`);
+      } else {
+        toast('⚠ Invalid format — expected {"customers":[...]}');
+      }
+    }catch{toast('⚠ Failed to parse JSON')}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+function dzOver(e){e.preventDefault();document.getElementById('import-dropzone').classList.add('drag-over')}
+function dzLeave(e){document.getElementById('import-dropzone').classList.remove('drag-over')}
+function dzDrop(e){
+  e.preventDefault();
+  document.getElementById('import-dropzone').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(Array.isArray(data.customers)&&data.customers.length){
+        customers=data.customers;LS.set('customers',customers);
+        renderCustomers('');
+        toast(`✓ ${customers.length} customers imported`);
+      } else {
+        toast('⚠ Invalid format — expected {"customers":[...]}');
+      }
+    }catch{toast('⚠ Failed to parse JSON')}
+  };
+  reader.readAsText(file);
 }
 
 /* ── ORDER ─────────────────────────────────────────────────────────────── */
