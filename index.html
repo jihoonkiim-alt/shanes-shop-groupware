@@ -598,6 +598,7 @@ function sheetsReq(action,payload={}){
     if(payload.id!==undefined)p.set('id',payload.id);
     if(payload.row)p.set('row',encodeURIComponent(JSON.stringify(payload.row)));
     if(payload.updates)p.set('updates',encodeURIComponent(JSON.stringify(payload.updates)));
+    if(payload.rows)p.set('rows',payload.rows);
     const s=document.createElement('script');
     const t=setTimeout(()=>{cleanup();resolve(null)},10000);
     function cleanup(){clearTimeout(t);delete window[cb];if(s.parentNode)s.remove()}
@@ -618,7 +619,15 @@ async function syncFromSheets(){
     if(res.inouts?.length){inouts=res.inouts;LS.set('inouts',inouts)}
     if(res.events?.length){events=res.events;LS.set('events',events)}
     if(res.expenses?.length){expenses=res.expenses;LS.set('expenses',expenses)}
-    setSS('connected');toast('✓ Synced from Google Sheets');renderDash();
+    setSS('connected');toast('✓ Synced from Google Sheets');
+    renderDash();
+    const activeTab=document.querySelector('.sec.active');
+    if(activeTab){
+      if(activeTab.id==='tab-customers')renderCustomers('');
+      else if(activeTab.id==='tab-inventory')renderInventory('');
+      else if(activeTab.id==='tab-sales')renderOrders('');
+      else if(activeTab.id==='tab-invoices')renderInvoicesPage();
+    }
   }else{setSS(SCRIPT_URL?'connected':'off');toast('⚠ Sync failed — check Sheets URL')}
 }
 async function pushRow(sheet,obj){if(SCRIPT_URL)await sheetsReq('append',{sheet,row:obj})}
