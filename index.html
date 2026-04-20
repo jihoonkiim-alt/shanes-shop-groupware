@@ -424,7 +424,12 @@ tr:hover td{background:var(--bg)}
     <button class="tt" id="tt-proxy" onclick="setOrderType('proxy')"><div class="ttk">🛒 Proxy Purchase</div><div class="tte">구매대행</div><div class="ttd">Buy on behalf — no stock deduction</div></button>
   </div>
   <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="o-date"></div>
-  <div class="field"><label><span class="lk">Customer / 고객</span></label><select id="o-customer"><option value="">Select customer...</option></select></div>
+  <div class="field" style="position:relative">
+    <label><span class="lk">Customer / 고객</span></label>
+    <input type="text" id="o-customer-text" placeholder="Type to search customer..." autocomplete="off" oninput="filterCustomerAC(this.value)" onblur="hideACAfterDelay()">
+    <input type="hidden" id="o-customer">
+    <div id="o-customer-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:9999;max-height:220px;overflow-y:auto;margin-top:4px"></div>
+  </div>
   <div id="stock-fields">
     <div class="section-lbl">Product Info / 상품 정보</div>
     <div class="field"><label><span class="lk">Select Product / 상품 선택</span></label><select id="o-product" onchange="fillStockPrice()"><option value="">Select...</option></select></div>
@@ -717,7 +722,8 @@ function openModal(id){
   const key=id.replace('modal-','');
   if(id==='modal-order'){
     document.getElementById('o-date').value=nowDate();
-    populateSel('o-customer',customers.map(c=>({v:c.id,l:c.name})));
+    document.getElementById('o-customer-text').value='';
+    document.getElementById('o-customer').value='';
     populateSel('o-product',products.map(p=>({v:p.id,l:`${p.name} (stock: ${p.stock})`})));
     setOrderType('stock');
   }
@@ -726,7 +732,9 @@ function openModal(id){
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
   if(id==='modal-setup')document.getElementById('script-url-input').value=SCRIPT_URL;
   const ov=document.getElementById('overlay-'+key);
-  ov.style.cssText=`position:fixed!important;top:0!important;left:0!important;right:0!important;height:${Math.max(window.screen.height,3000)}px!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;padding-top:40px!important;z-index:9999!important`;
+  const isOrder=key==='order';
+  ov.style.cssText=`position:fixed!important;top:0!important;left:0!important;right:0!important;height:${Math.max(window.screen.height,3000)}px!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;padding-top:${isOrder?'5vh':'40px'}!important;z-index:9999!important`;
+  if(isOrder)document.getElementById('modal-order').style.cssText='min-height:80vh!important;width:100%!important;max-width:100%!important';
   ov.classList.add('open');
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
@@ -741,6 +749,27 @@ function closeModal(id){
 }
 
 /* ── ORDER ─────────────────────────────────────────────────────────────── */
+function filterCustomerAC(q){
+  const ac=document.getElementById('o-customer-ac');
+  if(!q.trim()){ac.style.display='none';return}
+  const matches=customers.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!matches.length){ac.style.display='none';return}
+  ac.innerHTML=matches.map(c=>`
+    <div onclick="selectCustomerAC(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.contact||'').replace(/'/g,"\\'")}','${(c.address||'').replace(/'/g,"\\'")}')"
+      style="padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px"
+      onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='#fff'">
+      <div style="font-weight:600">${c.name}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.contact||''}${c.address?' · '+c.address:''}</div>
+    </div>`).join('');
+  ac.style.display='block';
+}
+function selectCustomerAC(id,name,contact,address){
+  document.getElementById('o-customer-text').value=name;
+  document.getElementById('o-customer').value=id;
+  document.getElementById('o-customer-ac').style.display='none';
+}
+function hideACAfterDelay(){setTimeout(()=>{const ac=document.getElementById('o-customer-ac');if(ac)ac.style.display='none'},200)}
+
 function setOrderType(t){
   document.getElementById('stock-fields').style.display=t==='stock'?'block':'none';
   document.getElementById('proxy-fields').style.display=t==='proxy'?'block':'none';
