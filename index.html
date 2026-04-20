@@ -239,6 +239,11 @@ tr:hover td{background:var(--bg)}
   .invoice-doc,.invoice-doc *{visibility:visible!important}
   .invoice-doc{position:fixed!important;top:0!important;left:0!important;width:100%!important;padding:20mm 22mm!important;box-shadow:none!important}
   .idoc-actions{display:none!important}
+  body.print-finance *{visibility:hidden!important}
+  body.print-finance #tab-finance,body.print-finance #tab-finance *{visibility:visible!important}
+  body.print-finance #tab-finance{position:fixed!important;top:0!important;left:0!important;width:100%!important;padding:14mm 16mm!important}
+  body.print-finance .ph .btn-row{display:none!important}
+  body.print-finance .ph{margin-bottom:10mm!important}
 }
 @media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.two-col,.below-cal{grid-template-columns:1fr}.nb{padding:5px 7px}.grid3{grid-template-columns:1fr 1fr}.inv-detail-hd,.inv-detail-row{grid-template-columns:70px 1fr 70px 80px}.invoice-doc{padding:24px 20px}.idoc-meta{flex-direction:column}.idoc-meta-item{border-right:none;border-bottom:1px solid #E8E3DB}}
 </style>
@@ -308,6 +313,7 @@ tr:hover td{background:var(--bg)}
       <select id="fin-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderFinance()"></select>
       <button class="btn btn-p" onclick="openModal('modal-expense')">+ Add Expense</button>
       <button class="btn" onclick="dlFinance()">⬇ .xlsx</button>
+      <button class="btn" onclick="printFinance()">🖨 Print / PDF</button>
     </div>
   </div>
   <div class="stats" id="fin-stats"></div>
@@ -1329,6 +1335,11 @@ function dlInvoices(){
   });
   xlsxDownload([{name:'Invoices',data:rows}],`shanes-invoices-${month}.xlsx`);
   toast('✓ Downloaded: Invoices');
+}
+function printFinance(){
+  document.body.classList.add('print-finance');
+  window.print();
+  document.body.classList.remove('print-finance');
 }
 function dlCalendar(){
   xlsxDownload([
