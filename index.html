@@ -269,6 +269,7 @@ tr:hover td{background:var(--bg)}
   </div>
   <div class="topbar-r">
     <div class="date-block"><div class="dk" id="date-ko"></div><div class="de" id="date-en"></div></div>
+    <button class="sheets-btn" id="sync-btn" onclick="syncFromSheets()" title="Pull latest data from Google Sheets">↓ Sync</button>
     <button class="sheets-btn" id="sheets-btn" onclick="openModal('modal-setup')"><span class="sdot" id="sdot"></span><span id="sheets-lbl">Connect Sheets</span></button>
   </div>
 </div>
@@ -765,15 +766,22 @@ async function pushCustomersToSheets(){
   if(!SCRIPT_URL){toast('⚠ Connect Google Sheets first');return}
   if(!customers.length){toast('⚠ No customers to push');return}
   const btn=document.getElementById('push-customers-btn');
-  btn.textContent='Uploading...';btn.disabled=true;
+  btn.disabled=true;
   try{
-    const formData=new URLSearchParams();
-    formData.append('data',JSON.stringify({action:'bulkWrite',sheet:'Customers',rows:customers}));
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData.toString()});
-    toast(`✓ ${customers.length} customers sent — syncing...`);
-    setTimeout(()=>syncFromSheets(),3000);
-  }catch(e){toast('⚠ Push failed: '+e.message)}
-  finally{btn.textContent='↑ Push to Sheets';btn.disabled=false}
+    btn.textContent='Clearing...';
+    await sheetsReq('clearSheet',{sheet:'Customers'});
+    const chunkSize=8,concurrency=4;
+    const chunks=[];
+    for(let i=0;i<customers.length;i+=chunkSize) chunks.push(customers.slice(i,i+chunkSize));
+    for(let i=0;i<chunks.length;i+=concurrency){
+      const done=Math.min((i+concurrency)*chunkSize,customers.length);
+      btn.textContent=`Uploading ${done}/${customers.length}...`;
+      const batch=chunks.slice(i,i+concurrency);
+      await Promise.all(batch.map(chunk=>sheetsReq('bulkAppend',{sheet:'Customers',rows:JSON.stringify(chunk)})));
+    }
+    toast(`✓ ${customers.length} customers pushed to Sheets`);
+  }catch(err){toast('⚠ Push failed: '+err.message)}
+  btn.textContent='↑ Push to Sheets';btn.disabled=false;
 }
 
 /* ── CUSTOMER IMPORT ────────────────────────────────────────────────────── */
