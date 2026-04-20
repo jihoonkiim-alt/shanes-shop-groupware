@@ -107,15 +107,15 @@ tr:hover td{background:var(--bg)}
 .mth{margin-bottom:20px}
 .mth .mk{font-size:13px;color:var(--text3);margin-top:4px}
 .mth .me{font-size:19px;font-weight:600}
-.field{margin-bottom:16px}
-.field .lk{font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px}
-.field .le{font-size:11px;color:var(--text3);display:block;margin-top:-3px;margin-bottom:6px}
-.field input,.field select,.field textarea{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--text);outline:none;transition:.15s}
+.field{margin-bottom:22px}
+.field .lk{font-size:12px;font-weight:600;color:var(--text3);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
+.field .le{font-size:11px;color:var(--text3);display:block;margin-top:-4px;margin-bottom:8px}
+.field input,.field select,.field textarea{width:100%;padding:13px 16px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:#fff;color:var(--text);outline:none;transition:.15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--al)}
-.field textarea{resize:vertical;min-height:64px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.field textarea{resize:vertical;min-height:80px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:28px;padding-top:22px;border-top:1px solid var(--border)}
 .divider{border:none;border-top:1px solid var(--border);margin:18px 0}
 .type-toggle{display:flex;gap:8px;margin-bottom:18px}
 .tt{flex:1;padding:14px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;text-align:center;font-family:inherit;transition:.15s}
@@ -423,52 +423,42 @@ tr:hover td{background:var(--bg)}
     <button class="tt" id="tt-stock" onclick="setOrderType('stock')"><div class="ttk">📦 Stock Sale</div><div class="tte">재고 판매</div><div class="ttd">Deducts from inventory automatically</div></button>
     <button class="tt" id="tt-proxy" onclick="setOrderType('proxy')"><div class="ttk">🛒 Proxy Purchase</div><div class="tte">구매대행</div><div class="ttd">Buy on behalf — no stock deduction</div></button>
   </div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="o-date"></div>
-    <div class="field"><label><span class="lk">Customer / 고객</span></label><select id="o-customer"><option value="">Select customer...</option></select></div>
-  </div>
+  <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="o-date"></div>
+  <div class="field"><label><span class="lk">Customer / 고객</span></label><select id="o-customer"><option value="">Select customer...</option></select></div>
   <div id="stock-fields">
     <div class="section-lbl">Product Info / 상품 정보</div>
     <div class="field"><label><span class="lk">Select Product / 상품 선택</span></label><select id="o-product" onchange="fillStockPrice()"><option value="">Select...</option></select></div>
-    <div class="grid3">
-      <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="o-qty" min="1" value="1" oninput="calcStockTotal()"></div>
-      <div class="field"><label><span class="lk">Unit Price / 단가 (₩)</span></label><input type="number" id="o-unit" oninput="calcStockTotal()"></div>
-      <div class="field"><label><span class="lk">Total / 합계 (₩)</span></label><input type="number" id="o-total" readonly style="background:var(--bg);color:var(--accent);font-weight:600"></div>
-    </div>
+    <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="o-qty" min="1" value="1" oninput="calcStockTotal()"></div>
+    <div class="field"><label><span class="lk">Unit Price / 단가 (₩)</span></label><input type="number" id="o-unit" oninput="calcStockTotal()"></div>
+    <div class="field"><label><span class="lk">Total / 합계 (₩)</span></label><input type="number" id="o-total" readonly style="background:var(--bg);color:var(--accent);font-weight:600"></div>
   </div>
   <div id="proxy-fields">
     <div class="proxy-note">Proxy Purchase Mode — no stock deduction. Enter cost and charge amount below.</div>
     <div class="field"><label><span class="lk">Item Description / 상품명·내용</span></label><input type="text" id="o-pdesc" placeholder="e.g. Coupang — BBW Body Lotion 500ml × 3"></div>
     <div class="field"><label><span class="lk">Product URL (optional)</span></label><input type="text" id="o-url" placeholder="https://..."></div>
-    <div class="grid2">
-      <div class="field"><label><span class="lk">Platform / 구매처</span></label>
-        <select id="o-platform">
-          <option value="">Select platform...</option>
-          <option value="coupang">Coupang / 쿠팡</option>
-          <option value="naver">Naver Smart Store / 네이버</option>
-          <option value="nsmall">NS Mall</option>
-          <option value="domeggook">Domeggook / 도매꾹</option>
-          <option value="other">Other / 기타</option>
-        </select>
-      </div>
-      <div class="field"><label><span class="lk">Order # / 주문번호</span><span class="le">Platform order confirmation number</span></label><input type="text" id="o-receipt" placeholder="e.g. 쿠팡 주문번호"></div>
+    <div class="field"><label><span class="lk">Platform / 구매처</span></label>
+      <select id="o-platform">
+        <option value="">Select platform...</option>
+        <option value="coupang">Coupang / 쿠팡</option>
+        <option value="naver">Naver Smart Store / 네이버</option>
+        <option value="nsmall">NS Mall</option>
+        <option value="domeggook">Domeggook / 도매꾹</option>
+        <option value="other">Other / 기타</option>
+      </select>
     </div>
-    <div class="grid3">
-      <div class="field"><label><span class="lk">My Cost / 원가 (₩)</span><span class="le">What I paid to the platform</span></label><input type="number" id="o-cost" placeholder="0"></div>
-      <div class="field"><label><span class="lk">Shipping / 배송비 (₩)</span><span class="le">Shipping & handling cost</span></label><input type="number" id="o-ship" placeholder="0"></div>
-      <div class="field"><label><span class="lk">Charge / 청구액 (₩)</span><span class="le">What customer pays me</span></label><input type="number" id="o-charge" placeholder="0"></div>
-    </div>
+    <div class="field"><label><span class="lk">Order # / 주문번호</span><span class="le">Platform order confirmation number</span></label><input type="text" id="o-receipt" placeholder="e.g. 쿠팡 주문번호"></div>
+    <div class="field"><label><span class="lk">My Cost / 원가 (₩)</span><span class="le">What I paid to the platform</span></label><input type="number" id="o-cost" placeholder="0"></div>
+    <div class="field"><label><span class="lk">Shipping / 배송비 (₩)</span><span class="le">Shipping & handling cost</span></label><input type="number" id="o-ship" placeholder="0"></div>
+    <div class="field"><label><span class="lk">Charge / 청구액 (₩)</span><span class="le">What customer pays me</span></label><input type="number" id="o-charge" placeholder="0"></div>
     <div class="field"><label><span class="lk">Proxy Status / 진행 상태</span></label>
       <select id="o-proxy-status"><option value="pending">Pending / 미처리</option><option value="done">Done / 완료</option></select>
     </div>
   </div>
   <hr class="divider">
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Payment Method / 결제 방식</span></label>
-      <select id="o-payment"><option value="credit">On Credit / 외상 (월말 정산)</option><option value="cash">Cash / 현금</option><option value="transfer">Bank Transfer / 계좌이체</option></select>
-    </div>
-    <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="Delivery address, special request..."></div>
+  <div class="field"><label><span class="lk">Payment Method / 결제 방식</span></label>
+    <select id="o-payment"><option value="credit">On Credit / 외상 (월말 정산)</option><option value="cash">Cash / 현금</option><option value="transfer">Bank Transfer / 계좌이체</option></select>
   </div>
+  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="Delivery address, special request..."></div>
   <div class="mact">
     <button class="btn" onclick="closeModal('modal-order')">Cancel</button>
     <button class="btn btn-p" style="padding:10px 28px;font-size:13px" onclick="saveOrder()">Save Order</button>
@@ -481,14 +471,10 @@ tr:hover td{background:var(--bg)}
 <div class="modal" id="modal-product">
   <div class="mth"><div class="me">Add Stock Product</div><div class="mk">재고 상품 추가</div></div>
   <div class="field"><label><span class="lk">Product Name / 상품명</span></label><input type="text" id="p-name" placeholder="e.g. BBW Body Lotion 250ml"></div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Category / 카테고리</span></label><select id="p-cat"><option>Body Care</option><option>Fragrance</option><option>Home Scent</option><option>Gifts</option><option>Other / 기타</option></select></div>
-    <div class="field"><label><span class="lk">Price / 판매가 (₩)</span></label><input type="number" id="p-price" placeholder="0"></div>
-  </div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Initial Stock / 초기 재고</span></label><input type="number" id="p-stock" value="0"></div>
-    <div class="field"><label><span class="lk">Min Stock Alert / 최소 재고</span></label><input type="number" id="p-min" value="5"></div>
-  </div>
+  <div class="field"><label><span class="lk">Category / 카테고리</span></label><select id="p-cat"><option>Body Care</option><option>Fragrance</option><option>Home Scent</option><option>Gifts</option><option>Other / 기타</option></select></div>
+  <div class="field"><label><span class="lk">Price / 판매가 (₩)</span></label><input type="number" id="p-price" placeholder="0"></div>
+  <div class="field"><label><span class="lk">Initial Stock / 초기 재고</span></label><input type="number" id="p-stock" value="0"></div>
+  <div class="field"><label><span class="lk">Min Stock Alert / 최소 재고</span></label><input type="number" id="p-min" value="5"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><textarea id="p-note" placeholder="Product description..."></textarea></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-product')">Cancel</button><button class="btn btn-p" onclick="saveProduct()">Save</button></div>
 </div>
@@ -500,10 +486,8 @@ tr:hover td{background:var(--bg)}
   <div class="mth"><div class="me">Stock Movement Entry</div><div class="mk">입출고 등록</div></div>
   <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="io-date"></div>
   <div class="field"><label><span class="lk">Product / 상품</span></label><select id="io-product"><option value="">Select product...</option></select></div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Type / 구분</span></label><select id="io-type"><option value="in">Stock In / 입고</option><option value="out">Stock Out / 출고</option><option value="adjust">Adjust / 재고조정</option></select></div>
-    <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="io-qty" value="1" min="1"></div>
-  </div>
+  <div class="field"><label><span class="lk">Type / 구분</span></label><select id="io-type"><option value="in">Stock In / 입고</option><option value="out">Stock Out / 출고</option><option value="adjust">Adjust / 재고조정</option></select></div>
+  <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="io-qty" value="1" min="1"></div>
   <div class="field"><label><span class="lk">Note / 비고</span></label><input type="text" id="io-note" placeholder="e.g. Coupang restock"></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-inout')">Cancel</button><button class="btn btn-p" onclick="saveInout()">Save</button></div>
 </div>
@@ -513,24 +497,20 @@ tr:hover td{background:var(--bg)}
 <div class="modal-overlay" id="overlay-customer" onclick="if(event.target===this)closeModal('modal-customer')">
 <div class="modal" id="modal-customer">
   <div class="mth"><div class="me">Add Customer</div><div class="mk">고객 추가</div></div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Full Name / 이름</span></label><input type="text" id="c-name"></div>
-    <div class="field"><label><span class="lk">Phone / 연락처</span></label><input type="text" id="c-contact" placeholder="010-xxxx-xxxx or +63-xxx"></div>
-  </div>
+  <div class="field"><label><span class="lk">Full Name / 이름</span></label><input type="text" id="c-name"></div>
+  <div class="field"><label><span class="lk">Phone / 연락처</span></label><input type="text" id="c-contact" placeholder="010-xxxx-xxxx or +63-xxx"></div>
   <div class="field"><label><span class="lk">Address / 주소</span><span class="le">City, district, street</span></label><input type="text" id="c-address" placeholder="e.g. 서울시 강남구 테헤란로 123"></div>
   <div class="field"><label><span class="lk">Address Detail / 상세주소</span><span class="le">Building, floor, unit number</span></label><input type="text" id="c-address2" placeholder="e.g. 101동 502호"></div>
   <div class="field"><label><span class="lk">SNS / Facebook</span><span class="le">Facebook name or messenger link</span></label><input type="text" id="c-sns" placeholder="e.g. fb.com/username"></div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Customer Type / 고객 유형</span></label>
-      <select id="c-type">
-        <option value="retail">Retail / 일반</option>
-        <option value="wholesale">Wholesale / 도매</option>
-        <option value="vip">VIP</option>
-      </select>
-    </div>
-    <div class="field"><label><span class="lk">Payment / 결제 방식</span></label>
-      <select id="c-payment"><option value="credit">On Credit / 외상</option><option value="cash">Cash / 현금</option><option value="transfer">Transfer / 계좌이체</option><option value="mixed">Mixed / 혼합</option></select>
-    </div>
+  <div class="field"><label><span class="lk">Customer Type / 고객 유형</span></label>
+    <select id="c-type">
+      <option value="retail">Retail / 일반</option>
+      <option value="wholesale">Wholesale / 도매</option>
+      <option value="vip">VIP</option>
+    </select>
+  </div>
+  <div class="field"><label><span class="lk">Payment / 결제 방식</span></label>
+    <select id="c-payment"><option value="credit">On Credit / 외상</option><option value="cash">Cash / 현금</option><option value="transfer">Transfer / 계좌이체</option><option value="mixed">Mixed / 혼합</option></select>
   </div>
   <div class="field"><label><span class="lk">Credit Limit / 외상 한도 (₩)</span><span class="le">0 = no limit set</span></label><input type="number" id="c-limit" value="0"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><textarea id="c-note" placeholder="Special requests, preferences..."></textarea></div>
@@ -566,17 +546,15 @@ tr:hover td{background:var(--bg)}
 <div class="modal" id="modal-expense">
   <div class="mth"><div class="me">Add Expense</div><div class="mk">지출 등록 — 사업 비용</div></div>
   <div class="field"><label><span class="lk">Date / 날짜</span></label><input type="date" id="exp-date"></div>
-  <div class="grid2">
-    <div class="field"><label><span class="lk">Expense Type / 비용 구분</span></label>
-      <select id="exp-type">
-        <option value="shipping">Shipping Fee / 배송비</option>
-        <option value="packaging">Packaging / 포장비</option>
-        <option value="fee">Platform/Service Fee / 수수료</option>
-        <option value="other">Other / 기타</option>
-      </select>
-    </div>
-    <div class="field"><label><span class="lk">Amount / 금액 (₩)</span></label><input type="number" id="exp-amount" placeholder="0"></div>
+  <div class="field"><label><span class="lk">Expense Type / 비용 구분</span></label>
+    <select id="exp-type">
+      <option value="shipping">Shipping Fee / 배송비</option>
+      <option value="packaging">Packaging / 포장비</option>
+      <option value="fee">Platform/Service Fee / 수수료</option>
+      <option value="other">Other / 기타</option>
+    </select>
   </div>
+  <div class="field"><label><span class="lk">Amount / 금액 (₩)</span></label><input type="number" id="exp-amount" placeholder="0"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="exp-note" placeholder="e.g. Coupang delivery charge, box supplies..."></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-expense')">Cancel</button><button class="btn btn-p" onclick="saveExpense()">Save Expense</button></div>
 </div>
