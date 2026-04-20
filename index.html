@@ -170,11 +170,11 @@ tr:hover td{background:var(--bg)}
 <div class="topbar">
   <div class="logo"><div class="lo-en">Shane's <em>Online Shop</em></div><div class="lo-ko">쉐인 온라인샵 관리시스템</div></div>
   <div class="nav">
-    <button class="nb active" onclick="showTab('dash')"><span class="nk">대시보드</span><span class="ne">Dashboard</span></button>
-    <button class="nb" onclick="showTab('inventory')"><span class="nk">재고</span><span class="ne">Inventory</span></button>
-    <button class="nb" onclick="showTab('sales')"><span class="nk">매출·청구</span><span class="ne">Sales & Billing</span></button>
-    <button class="nb" onclick="showTab('customers')"><span class="nk">고객</span><span class="ne">Customers</span></button>
-    <button class="nb" onclick="showTab('calendar')"><span class="nk">캘린더</span><span class="ne">Calendar</span></button>
+    <button class="nb active" onclick="showTab('dash')"><span class="ne">Dashboard</span><span class="nk">대시보드</span></button>
+    <button class="nb" onclick="showTab('inventory')"><span class="ne">Inventory</span><span class="nk">재고</span></button>
+    <button class="nb" onclick="showTab('sales')"><span class="ne">Sales & Billing</span><span class="nk">매출·청구</span></button>
+    <button class="nb" onclick="showTab('customers')"><span class="ne">Customers</span><span class="nk">고객</span></button>
+    <button class="nb" onclick="showTab('calendar')"><span class="ne">Calendar</span><span class="nk">캘린더</span></button>
   </div>
   <div class="topbar-r">
     <div class="date-block"><div class="dk" id="date-ko"></div><div class="de" id="date-en"></div></div>
@@ -184,47 +184,47 @@ tr:hover td{background:var(--bg)}
 <div class="main">
 
 <div class="sec active" id="tab-dash">
-  <div class="ph"><div><div class="ptk">대시보드</div><div class="pte">Dashboard — Operations Overview</div></div><button class="btn" onclick="syncFromSheets()">↻ 동기화 / Sync</button></div>
+  <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><button class="btn" onclick="syncFromSheets()">↻ 동기화 / Sync</button></div>
   <div class="stats" id="dash-stats"></div>
   <div class="two-col">
-    <div class="card"><div class="ch"><div><div class="ck">이번 달 청구 현황</div><div class="ce">Monthly Billing Status</div></div></div>
-      <table><thead><tr><th><span class="tk">고객</span><span class="te">Customer</span></th><th><span class="tk">청구액</span><span class="te">Billed</span></th><th><span class="tk">상태</span><span class="te">Status</span></th></tr></thead><tbody id="dash-billing"></tbody></table></div>
-    <div class="card"><div class="ch"><div><div class="ck">재고 부족 알림</div><div class="ce">Low Stock Alerts</div></div></div>
-      <table><thead><tr><th><span class="tk">상품명</span><span class="te">Product</span></th><th><span class="tk">현재고</span><span class="te">Stock</span></th><th><span class="tk">상태</span><span class="te">Status</span></th></tr></thead><tbody id="dash-stock"></tbody></table></div>
+    <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이번 달 청구 현황</div></div></div>
+      <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table></div>
+    <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
+      <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table></div>
   </div>
-  <div class="card"><div class="ch"><div><div class="ck">최근 주문</div><div class="ce">Recent Orders</div></div></div>
-    <table><thead><tr><th><span class="tk">일자</span><span class="te">Date</span></th><th><span class="tk">고객</span><span class="te">Customer</span></th><th><span class="tk">내용</span><span class="te">Item</span></th><th><span class="tk">유형</span><span class="te">Type</span></th><th><span class="tk">금액</span><span class="te">Amount</span></th><th><span class="tk">상태</span><span class="te">Status</span></th></tr></thead><tbody id="dash-orders"></tbody></table></div>
+  <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table></div>
 </div>
 
 <div class="sec" id="tab-inventory">
-  <div class="ph"><div><div class="ptk">재고 관리</div><div class="pte">Inventory Management</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ 상품 추가</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ 입출고</button></div></div>
+  <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ 상품 추가</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ 입출고</button></div></div>
   <div class="stats" id="inv-stats"></div>
-  <div class="card"><div class="ch"><div><div class="ck">재고 상품 목록</div><div class="ce">Stock Products</div></div></div>
-    <table><thead><tr><th><span class="tk">상품명</span><span class="te">Product</span></th><th><span class="tk">카테고리</span><span class="te">Category</span></th><th><span class="tk">판매가</span><span class="te">Price</span></th><th><span class="tk">현재고</span><span class="te">Stock</span></th><th><span class="tk">재고율</span><span class="te">Level</span></th><th><span class="tk">관리</span><span class="te">Action</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
-  <div class="card"><div class="ch"><div><div class="ck">최근 입출고</div><div class="ce">Stock Movements</div></div></div>
-    <table><thead><tr><th><span class="tk">일자</span><span class="te">Date</span></th><th><span class="tk">상품</span><span class="te">Product</span></th><th><span class="tk">구분</span><span class="te">Type</span></th><th><span class="tk">수량</span><span class="te">Qty</span></th><th><span class="tk">비고</span><span class="te">Note</span></th></tr></thead><tbody id="inout-table"></tbody></table></div>
+  <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div></div>
+    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Price</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Level</span><span class="tk">재고율</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
+  <div class="card"><div class="ch"><div><div class="ce">Stock Movements</div><div class="ck">최근 입출고</div></div></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Product</span><span class="tk">상품</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Qty</span><span class="tk">수량</span></th><th><span class="te">Note</span><span class="tk">비고</span></th></tr></thead><tbody id="inout-table"></tbody></table></div>
 </div>
 
 <div class="sec" id="tab-sales">
-  <div class="ph"><div><div class="ptk">매출 · 청구 관리</div><div class="pte">Sales & Billing Management</div></div><button class="btn btn-p" onclick="openModal('modal-order')">+ 주문 등록 / New Order</button></div>
+  <div class="ph"><div><div class="pte">Sales & Billing Management</div><div class="ptk">매출 · 청구 관리</div></div><button class="btn btn-p" onclick="openModal('modal-order')">+ 주문 등록 / New Order</button></div>
   <div class="stats" id="sales-stats"></div>
   <div class="card"><div class="ch">
-    <div><div class="ck">주문 목록</div><div class="ce">Order List</div></div>
+    <div><div class="ce">Order List</div><div class="ck">주문 목록</div></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="month-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderOrders()"></select>
       <select id="type-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderOrders()"><option value="">전체 / All</option><option value="stock">재고판매</option><option value="proxy">구매대행</option></select>
     </div></div>
-    <table><thead><tr><th><span class="tk">일자</span><span class="te">Date</span></th><th><span class="tk">고객</span><span class="te">Customer</span></th><th><span class="tk">내용</span><span class="te">Item</span></th><th><span class="tk">유형</span><span class="te">Type</span></th><th><span class="tk">원가</span><span class="te">Cost</span></th><th><span class="tk">청구액</span><span class="te">Charged</span></th><th><span class="tk">결제</span><span class="te">Payment</span></th><th><span class="tk">상태</span><span class="te">Status</span></th><th><span class="tk">관리</span><span class="te">Action</span></th></tr></thead><tbody id="order-table"></tbody></table></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Charged</span><span class="tk">청구액</span></th><th><span class="te">Payment</span><span class="tk">결제</span></th><th><span class="te">Status</span><span class="tk">상태</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="order-table"></tbody></table></div>
 </div>
 
 <div class="sec" id="tab-customers">
-  <div class="ph"><div><div class="ptk">고객 관리</div><div class="pte">Customer Management</div></div><button class="btn btn-p" onclick="openModal('modal-customer')">+ 고객 추가</button></div>
+  <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><button class="btn btn-p" onclick="openModal('modal-customer')">+ 고객 추가</button></div>
   <div class="search-wrap"><input type="text" placeholder="고객명 검색 / Search..." oninput="renderCustomers(this.value)"></div>
-  <div class="card"><table><thead><tr><th><span class="tk">고객명</span><span class="te">Customer</span></th><th><span class="tk">연락처</span><span class="te">Contact</span></th><th><span class="tk">결제방식</span><span class="te">Payment</span></th><th><span class="tk">이달 주문액</span><span class="te">This Month</span></th><th><span class="tk">미수금</span><span class="te">Outstanding</span></th><th><span class="tk">상태</span><span class="te">Status</span></th><th><span class="tk">관리</span><span class="te">Action</span></th></tr></thead><tbody id="customer-table"></tbody></table></div>
+  <div class="card"><table><thead><tr><th><span class="te">Customer</span><span class="tk">고객명</span></th><th><span class="te">Contact</span><span class="tk">연락처</span></th><th><span class="te">Payment</span><span class="tk">결제방식</span></th><th><span class="te">This Month</span><span class="tk">이달 주문액</span></th><th><span class="te">Outstanding</span><span class="tk">미수금</span></th><th><span class="te">Status</span><span class="tk">상태</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="customer-table"></tbody></table></div>
 </div>
 
 <div class="sec" id="tab-calendar">
-  <div class="ph"><div><div class="ptk">캘린더</div><div class="pte">Calendar & Schedule</div></div><button class="btn btn-p" onclick="openModal('modal-event')">+ 일정 추가</button></div>
+  <div class="ph"><div><div class="pte">Calendar & Schedule</div><div class="ptk">캘린더</div></div><button class="btn btn-p" onclick="openModal('modal-event')">+ 일정 추가</button></div>
   <div class="cal-wrap">
     <div class="cal-hd">
       <div style="display:flex;align-items:center;gap:8px">
@@ -241,8 +241,8 @@ tr:hover td{background:var(--bg)}
     <div class="cal-grid"><div class="cal-dh" id="cal-dh"></div><div class="cal-days" id="cal-days"></div></div>
   </div>
   <div class="below-cal">
-    <div class="card"><div class="ch"><div><div class="ck">이달 일정</div><div class="ce">This Month</div></div></div><div id="event-list"></div></div>
-    <div class="card"><div class="ch"><div><div class="ck">월말 청구 예정</div><div class="ce">Billing Queue</div></div></div><div id="billing-queue"></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">This Month</div><div class="ck">이달 일정</div></div></div><div id="event-list"></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Billing Queue</div><div class="ck">월말 청구 예정</div></div></div><div id="billing-queue"></div></div>
   </div>
 </div>
 
@@ -252,7 +252,7 @@ tr:hover td{background:var(--bg)}
 <!-- 모든 모달 오버레이 — body 직접 하위 -->
 <div class="modal-overlay" id="overlay-setup" onclick="if(event.target===this)closeModal('modal-setup')">
 <div class="modal" id="modal-setup">
-  <div class="mth"><div class="mk">Google Sheets 연결</div><div class="me">Connect Sheets — data syncs across all devices</div></div>
+  <div class="mth"><div class="me">Connect Sheets — data syncs across all devices</div><div class="mk">Google Sheets 연결</div></div>
   <div class="setup-box">
     <div class="sb-t">Apps Script 웹앱 URL</div>
     <div class="sb-d">Google Sheets에서 배포한 Apps Script 웹앱 URL을 입력하세요.</div>
@@ -275,7 +275,7 @@ tr:hover td{background:var(--bg)}
 
 <div class="modal-overlay" id="overlay-order" onclick="if(event.target===this)closeModal('modal-order')">
 <div class="modal modal-lg" id="modal-order">
-  <div class="mth"><div class="mk">주문 등록 / New Order</div><div class="me">재고 판매 또는 구매대행 주문을 등록합니다</div></div>
+  <div class="mth"><div class="me">재고 판매 또는 구매대행 주문을 등록합니다</div><div class="mk">주문 등록 / New Order</div></div>
   <div class="type-toggle">
     <button class="tt" id="tt-stock" onclick="setOrderType('stock')"><div class="ttk">📦 재고 판매</div><div class="tte">Stock Sale</div><div class="ttd">보유 상품 → 재고 자동 차감</div></button>
     <button class="tt" id="tt-proxy" onclick="setOrderType('proxy')"><div class="ttk">🛒 구매대행</div><div class="tte">Proxy Purchase</div><div class="ttd">온라인 대신 구매 후 발송</div></button>
@@ -321,7 +321,7 @@ tr:hover td{background:var(--bg)}
 
 <div class="modal-overlay" id="overlay-product" onclick="if(event.target===this)closeModal('modal-product')">
 <div class="modal" id="modal-product">
-  <div class="mth"><div class="mk">재고 상품 추가</div><div class="me">Add Stock Product</div></div>
+  <div class="mth"><div class="me">Add Stock Product</div><div class="mk">재고 상품 추가</div></div>
   <div class="field"><label><span class="lk">상품명 / Product Name</span></label><input type="text" id="p-name" placeholder="예: BBW 바디로션 250ml"></div>
   <div class="grid2">
     <div class="field"><label><span class="lk">카테고리 / Category</span></label><select id="p-cat"><option>Body Care</option><option>Fragrance</option><option>Home Scent</option><option>Gifts</option><option>기타 / Other</option></select></div>
@@ -338,7 +338,7 @@ tr:hover td{background:var(--bg)}
 
 <div class="modal-overlay" id="overlay-inout" onclick="if(event.target===this)closeModal('modal-inout')">
 <div class="modal" id="modal-inout">
-  <div class="mth"><div class="mk">입출고 등록</div><div class="me">Stock Movement Entry</div></div>
+  <div class="mth"><div class="me">Stock Movement Entry</div><div class="mk">입출고 등록</div></div>
   <div class="field"><label><span class="lk">일자 / Date</span></label><input type="date" id="io-date"></div>
   <div class="field"><label><span class="lk">상품 / Product</span></label><select id="io-product"><option value="">선택하세요</option></select></div>
   <div class="grid2">
@@ -352,7 +352,7 @@ tr:hover td{background:var(--bg)}
 
 <div class="modal-overlay" id="overlay-customer" onclick="if(event.target===this)closeModal('modal-customer')">
 <div class="modal" id="modal-customer">
-  <div class="mth"><div class="mk">고객 추가</div><div class="me">Add Customer</div></div>
+  <div class="mth"><div class="me">Add Customer</div><div class="mk">고객 추가</div></div>
   <div class="grid2">
     <div class="field"><label><span class="lk">고객명 / Name</span></label><input type="text" id="c-name"></div>
     <div class="field"><label><span class="lk">연락처 / Contact</span></label><input type="text" id="c-contact" placeholder="010-xxxx-xxxx"></div>
@@ -365,7 +365,7 @@ tr:hover td{background:var(--bg)}
 
 <div class="modal-overlay" id="overlay-event" onclick="if(event.target===this)closeModal('modal-event')">
 <div class="modal" id="modal-event">
-  <div class="mth"><div class="mk">일정 추가</div><div class="me">Add Event</div></div>
+  <div class="mth"><div class="me">Add Event</div><div class="mk">일정 추가</div></div>
   <div class="field"><label><span class="lk">일자 / Date</span></label><input type="date" id="ev-date"></div>
   <div class="field"><label><span class="lk">제목 (한국어)</span></label><input type="text" id="ev-ko" placeholder="예: 월말 청구 마감"></div>
   <div class="field"><label><span class="lk">Title (English)</span></label><input type="text" id="ev-en" placeholder="e.g. Month-end billing"></div>
