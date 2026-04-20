@@ -100,9 +100,9 @@ tr:hover td{background:var(--bg)}
 .plat-other{background:var(--bg);color:var(--text2)}
 
 /* MODAL */
-.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:flex-start;padding:40px 20px;overflow-y:auto;min-height:100vh}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;justify-content:center;align-items:flex-start;padding:30px 20px;overflow-y:auto}
 .modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:32px 36px;width:100%;max-width:100%;margin:0 auto;position:relative;min-height:50vh}
+.modal{background:#fff;border-radius:16px;padding:32px 36px;width:100%;max-width:100%;margin:0 auto;position:relative;max-height:calc(100vh - 60px);overflow-y:auto}
 .modal-lg{max-width:100%}
 .mth{margin-bottom:20px}
 .mth .mk{font-size:13px;color:var(--text3);margin-top:4px}
@@ -350,7 +350,17 @@ tr:hover td{background:var(--bg)}
     <div class="dz-t">Import Customers JSON</div>
     <div class="dz-s">Drop .json file here or click to browse &nbsp;·&nbsp; Format: {"customers":[...]}</div>
   </label>
-  <div class="search-wrap"><input type="text" placeholder="Search by name..." oninput="renderCustomers(this.value)"></div>
+  <div class="search-wrap">
+    <input type="text" id="cust-search" placeholder="Search by name..." oninput="renderCustomers(this.value)">
+    <select id="cust-sort" onchange="renderCustomers(document.getElementById('cust-search').value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
+      <option value="name">Name A→Z</option>
+      <option value="name-desc">Name Z→A</option>
+      <option value="type">Type</option>
+      <option value="payment">Payment</option>
+      <option value="outstanding">Outstanding ↑</option>
+      <option value="month">This Month ↓</option>
+    </select>
+  </div>
   <div class="card"><table><thead><tr>
     <th><span class="te">Customer</span><span class="tk">고객명</span></th>
     <th><span class="te">Contact / Address</span><span class="tk">연락처 / 주소</span></th>
@@ -755,9 +765,6 @@ function openModal(id){
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
   if(id==='modal-setup')document.getElementById('script-url-input').value=SCRIPT_URL;
   const ov=document.getElementById('overlay-'+key);
-  const isOrder=key==='order';
-  ov.style.cssText=`position:fixed!important;top:0!important;left:0!important;right:0!important;height:${Math.max(window.screen.height,3000)}px!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;padding-top:${isOrder?'5vh':'40px'}!important;z-index:9999!important`;
-  if(isOrder)document.getElementById('modal-order').style.cssText='min-height:80vh!important;width:100%!important;max-width:100%!important';
   ov.classList.add('open');
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
@@ -1281,8 +1288,16 @@ function calcInvTotal(sub){
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
 function renderCustomers(q){
   const mo=thisMO();
-  const list=customers.filter(c=>!q||c.name.toLowerCase().includes(q.toLowerCase()));
-  document.getElementById('customer-table').innerHTML=list.length?list.map(c=>{
+  const sort=(document.getElementById('cust-sort')||{}).value||'name';
+  let list=customers.filter(c=>!q||c.name.toLowerCase().includes(q.toLowerCase()));
+  if(sort==='name')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(sort==='name-desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
+  else if(sort==='type')list.sort((a,b)=>(a.type||'').localeCompare(b.type||''));
+  else if(sort==='payment')list.sort((a,b)=>(a.payment||'').localeCompare(b.payment||''));
+  else if(sort==='outstanding')list.sort((a,b)=>Number(b.outstanding||0)-Number(a.outstanding||0));
+  else if(sort==='month'){const ma=id=>mo.filter(o=>o.customerId==id).reduce((s,o)=>s+Number(o.charge),0);list.sort((a,b)=>ma(b.id)-ma(a.id));}
+  const _list=list;
+  document.getElementById('customer-table').innerHTML=_list.length?_list.map(c=>{
     const ma=mo.filter(o=>o.customerId==c.id).reduce((s,o)=>s+Number(o.charge),0);
     const out=Number(c.outstanding||0);
     const creditWarn=c.creditLimit>0&&out>c.creditLimit?` <span style="color:var(--red);font-size:9px">⚠ Over limit</span>`:'';
