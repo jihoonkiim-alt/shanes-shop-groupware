@@ -546,7 +546,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- MODAL: Invoice View (거래명세서) -->
 <div class="modal-overlay" id="overlay-invoice-view" onclick="if(event.target===this)closeModal('modal-invoice-view')">
-<div class="modal modal-lg" id="modal-invoice-view" style="background:var(--bg)">
+<div class="modal modal-lg" id="modal-invoice-view" style="background:var(--bg);min-height:100vh">
   <div class="idoc-actions">
     <button class="btn" onclick="window.print()">🖨 Print / PDF로 저장</button>
     <button class="btn btn-d btn-xs" onclick="closeModal('modal-invoice-view')">✕ Close</button>
@@ -1163,7 +1163,12 @@ function openInvoiceModal(cid){
       </div>
       <div style="font-size:10px;color:#A09890;text-align:right">Shane's Online Shop<br>Thank you for your business!</div>
     </div>`;
-  openModal('modal-invoice-view');
+  const ov=document.getElementById('overlay-invoice-view');
+  ov.style.cssText=`position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:100vh!important;padding:0!important;display:flex!important;align-items:stretch!important;justify-content:stretch!important;z-index:9999!important;overflow-y:auto!important`;
+  document.getElementById('modal-invoice-view').style.cssText=`width:100%!important;max-width:100%!important;min-height:100vh!important;border-radius:0!important;margin:0!important`;
+  ov.classList.add('open');
+  document.body.style.overflow='hidden';
+  document.documentElement.style.overflow='hidden';
 }
 function calcInvTotal(sub){
   const ship=Number(document.getElementById('idoc-ship')?.value||0);
