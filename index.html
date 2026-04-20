@@ -198,7 +198,49 @@ tr:hover td{background:var(--bg)}
 .inv-footer{padding:12px 18px;background:var(--bg);border-top:2px solid var(--border2);display:flex;justify-content:flex-end;gap:24px;font-size:12px}
 .inv-footer .if-lbl{color:var(--text3)}.inv-footer .if-val{font-weight:600;font-family:'DM Mono',monospace}
 .inv-footer .if-net{color:var(--green);font-size:14px}
-@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.two-col,.below-cal{grid-template-columns:1fr}.nb{padding:5px 7px}.grid3{grid-template-columns:1fr 1fr}.inv-detail-hd,.inv-detail-row{grid-template-columns:70px 1fr 70px 80px}}
+/* INVOICE DOCUMENT */
+.invoice-doc{background:#fff;padding:44px 48px;max-width:700px;margin:0 auto;font-family:'DM Sans',sans-serif;color:#1A1814}
+.idoc-hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:22px;margin-bottom:22px;border-bottom:3px solid #C8521A}
+.idoc-biz{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.idoc-biz em{color:#C8521A;font-style:normal}
+.idoc-biz-sub{font-size:10px;color:#A09890;margin-top:3px;letter-spacing:.3px}
+.idoc-title{text-align:right}
+.idoc-title-ko{font-size:24px;font-weight:700;color:#C8521A;letter-spacing:2px}
+.idoc-title-en{font-size:10px;color:#A09890;letter-spacing:3px;margin-top:2px}
+.idoc-meta{display:flex;gap:0;margin-bottom:24px;border:1px solid #E8E3DB;border-radius:10px;overflow:hidden}
+.idoc-meta-item{flex:1;padding:10px 16px;border-right:1px solid #E8E3DB;font-size:11px}
+.idoc-meta-item:last-child{border-right:none}
+.idoc-meta-lbl{color:#A09890;font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.idoc-meta-val{font-family:'DM Mono',monospace;font-weight:500;font-size:12px}
+.idoc-billto{background:#F6F4EF;border-radius:10px;padding:18px 22px;margin-bottom:26px;display:flex;justify-content:space-between;align-items:flex-start}
+.idoc-bt-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#A09890;margin-bottom:8px}
+.idoc-bt-name{font-size:18px;font-weight:700;margin-bottom:5px}
+.idoc-bt-info{font-size:11px;color:#6B6458;line-height:1.9}
+.idoc-stamp{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;text-align:center;line-height:1.4;flex-shrink:0}
+.idoc-stamp.paid{border:2.5px solid #2D7A4F;color:#2D7A4F}
+.idoc-stamp.due{border:2.5px solid #9A6B0A;color:#9A6B0A}
+.idoc-table{width:100%;border-collapse:collapse;margin-bottom:24px}
+.idoc-table thead tr{background:#1A1814}
+.idoc-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;color:#fff;letter-spacing:.4px}
+.idoc-table th.r{text-align:right}
+.idoc-table td{padding:11px 14px;border-bottom:1px solid #E8E3DB;font-size:12px;vertical-align:top}
+.idoc-table td.r{text-align:right;font-family:'DM Mono',monospace;font-weight:600}
+.idoc-table td.num{text-align:center;color:#A09890;font-size:11px}
+.idoc-table tbody tr:last-child td{border-bottom:none}
+.idoc-totals{margin-left:auto;width:280px;border-top:2px solid #CEC7BA;padding-top:4px;margin-bottom:28px}
+.idoc-trow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12px;color:#6B6458;border-bottom:1px solid #E8E3DB}
+.idoc-trow:last-child{border-bottom:none;font-size:15px;font-weight:700;color:#1A1814;padding-top:12px;margin-top:4px}
+.idoc-trow input{width:120px;text-align:right;border:1px solid #CEC7BA;border-radius:6px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;outline:none;color:#1A1814;background:#fff}
+.idoc-trow input:focus{border-color:#C8521A;box-shadow:0 0 0 2px #FAF0EB}
+.idoc-foot{padding-top:20px;border-top:1px solid #E8E3DB;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#6B6458;line-height:1.9}
+.idoc-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:18px}
+@media print{
+  body *{visibility:hidden!important}
+  .invoice-doc,.invoice-doc *{visibility:visible!important}
+  .invoice-doc{position:fixed!important;top:0!important;left:0!important;width:100%!important;padding:20mm 22mm!important;box-shadow:none!important}
+  .idoc-actions{display:none!important}
+}
+@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.two-col,.below-cal{grid-template-columns:1fr}.nb{padding:5px 7px}.grid3{grid-template-columns:1fr 1fr}.inv-detail-hd,.inv-detail-row{grid-template-columns:70px 1fr 70px 80px}.invoice-doc{padding:24px 20px}.idoc-meta{flex-direction:column}.idoc-meta-item{border-right:none;border-bottom:1px solid #E8E3DB}}
 </style>
 </head>
 <body>
@@ -499,6 +541,17 @@ tr:hover td{background:var(--bg)}
   <div class="field"><label><span class="lk">제목 (한국어)</span></label><input type="text" id="ev-ko" placeholder="예: 월말 청구 마감"></div>
   <div class="field"><label><span class="lk">Category / 구분</span></label><select id="ev-type"><option value="billing">Billing / 청구</option><option value="order">Order·Delivery / 주문·배송</option><option value="note">Note / 메모</option></select></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-event')">Cancel</button><button class="btn btn-p" onclick="saveEvent()">Save</button></div>
+</div>
+</div>
+
+<!-- MODAL: Invoice View (거래명세서) -->
+<div class="modal-overlay" id="overlay-invoice-view" onclick="if(event.target===this)closeModal('modal-invoice-view')">
+<div class="modal modal-lg" id="modal-invoice-view" style="background:var(--bg)">
+  <div class="idoc-actions">
+    <button class="btn" onclick="window.print()">🖨 Print / PDF로 저장</button>
+    <button class="btn btn-d btn-xs" onclick="closeModal('modal-invoice-view')">✕ Close</button>
+  </div>
+  <div class="invoice-doc" id="invoice-doc"></div>
 </div>
 </div>
 
@@ -1015,7 +1068,6 @@ function renderInvoices(){
   const month=document.getElementById('inv-month')?.value||nowYM();
   const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
   const totalRev=mo.reduce((s,o)=>s+Number(o.charge),0);
-  const totalCost=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
   const creditOut=customers.reduce((s,c)=>s+Number(c.outstanding||0),0);
   const pending=mo.filter(o=>o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
   document.getElementById('inv-stats').innerHTML=
@@ -1023,64 +1075,100 @@ function renderInvoices(){
     `<div class="stat"><div class="sk">Invoiced Customers</div><div class="se">청구 고객 수</div><div class="sv blue">${new Set(mo.map(o=>o.customerId)).size}명</div></div>`+
     `<div class="stat"><div class="sk">On Credit</div><div class="se">외상 청구액</div><div class="sv amber">${won(pending)}</div></div>`+
     `<div class="stat"><div class="sk">Total Outstanding</div><div class="se">전체 미수금</div><div class="sv ${creditOut>0?'red':''}">${won(creditOut)}</div></div>`;
-
-  const html=customers.map(c=>{
+  const cards=customers.map(c=>{
     const cOrders=mo.filter(o=>o.customerId==c.id);
     const total=cOrders.reduce((s,o)=>s+Number(o.charge),0);
-    const cost=cOrders.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
-    const profit=total-cost;
     if(!cOrders.length)return'';
-    const isPending=cOrders.some(o=>o.payment==='credit');
-    const statusBadge=isPending
-      ?'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'
-      :'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
-    const uid=`inv-${c.id}`;
-    const rows=cOrders.sort((a,b)=>a.date.localeCompare(b.date)).map(o=>{
-      const totalCostRow=Number(o.cost||0)+Number(o.shippingCost||0);
-      const profitRow=Number(o.charge)-totalCostRow;
-      return`<div class="inv-detail-row">
-        <span class="mono" style="font-size:10px">${o.date.slice(5)}</span>
-        <span>${o.desc||'—'}</span>
-        <span class="mono">${o.qty||1}</span>
-        <span class="mono">${o.type==='proxy'?won(totalCostRow):'<span style="color:var(--text3)">—</span>'}</span>
-        <span class="mono" style="font-weight:600">${won(o.charge)}</span>
-        <span>${sBadge(o)}</span>
-      </div>`;
-    }).join('');
-    return`<div class="inv-card">
-      <div class="inv-head" onclick="toggleInvoice('${uid}')">
-        <div>
+    const isOut=Number(c.outstanding)>0;
+    return`<div class="inv-card" onclick="openInvoiceModal(${c.id})" style="cursor:pointer">
+      <div class="inv-head">
+        <div style="flex:1">
           <div class="inv-name">${c.name}</div>
-          <div class="inv-meta">${c.contact||''}${c.sns?` · ${c.sns}`:''} · ${cOrders.length} order${cOrders.length>1?'s':''}</div>
+          <div class="inv-meta">${cOrders.length} order${cOrders.length>1?'s':''} · ${c.contact||''}</div>
         </div>
-        <div style="text-align:right;margin-right:12px">
-          <div class="inv-amt" style="color:var(--green)">${won(total)}</div>
-          <div style="font-size:9px;color:var(--text3)">profit ${won(profit)}</div>
+        <div style="text-align:right;margin-right:14px">
+          <div class="inv-amt ${isOut?'':'green'}">${won(total)}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:2px">${isOut?`Outstanding ${won(c.outstanding)}`:'Settled ✓'}</div>
         </div>
-        ${statusBadge}
-        <span style="font-size:18px;color:var(--text3);margin-left:4px" id="${uid}-arrow">▸</span>
-      </div>
-      <div class="inv-body" id="${uid}">
-        <div class="inv-detail-hd">
-          <span>Date</span><span>Item</span><span>Qty</span><span>Cost</span><span>Charged</span><span>Status</span>
-        </div>
-        ${rows}
-        <div class="inv-footer">
-          <div><span class="if-lbl">Total Cost </span><span class="if-val">${won(cost)}</span></div>
-          <div><span class="if-lbl">Total Billed </span><span class="if-val">${won(total)}</span></div>
-          <div><span class="if-lbl">Profit </span><span class="if-val if-net">${won(profit)}</span></div>
-          ${Number(c.outstanding)>0?`<div><span class="if-lbl" style="color:var(--amber)">Outstanding </span><span class="if-val" style="color:var(--amber)">${won(c.outstanding)}</span></div>`:''}
-        </div>
+        ${isOut?'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>':'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>'}
+        <span style="font-size:18px;color:var(--text3);margin-left:10px">›</span>
       </div>
     </div>`;
   }).join('');
-  document.getElementById('invoice-list').innerHTML=html||'<div class="empty" style="padding:40px">No orders recorded for this month</div>';
+  document.getElementById('invoice-list').innerHTML=cards||'<div class="empty" style="padding:40px">No orders recorded for this month</div>';
 }
-function toggleInvoice(uid){
-  const body=document.getElementById(uid);
-  const arrow=document.getElementById(uid+'-arrow');
-  const isOpen=body.classList.toggle('open');
-  if(arrow)arrow.textContent=isOpen?'▾':'▸';
+
+function openInvoiceModal(cid){
+  const c=getC(cid);if(!c)return;
+  const month=document.getElementById('inv-month')?.value||nowYM();
+  const cOrders=orders.filter(o=>o.customerId==cid&&o.date&&o.date.startsWith(month)).sort((a,b)=>a.date.localeCompare(b.date));
+  const [yr,mn]=month.split('-');
+  const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const invNo=`INV-${month.replace('-','')}-${String(cid).padStart(3,'0')}`;
+  const subtotal=cOrders.reduce((s,o)=>s+Number(o.charge),0);
+  const isOut=Number(c.outstanding)>0;
+  const payLabel={credit:'On Credit / 외상',cash:'Cash / 현금',transfer:'Bank Transfer / 계좌이체',mixed:'Mixed / 혼합'};
+  const itemRows=cOrders.length?cOrders.map((o,i)=>`
+    <tr>
+      <td class="num">${i+1}</td>
+      <td>${o.desc||'—'}${o.note?`<br><span style="font-size:10px;color:#A09890">${o.note}</span>`:''}</td>
+      <td style="text-align:center;color:#6B6458">${o.qty||1}</td>
+      <td class="r">${won(o.charge)}</td>
+    </tr>`).join('')
+    :`<tr><td colspan="4" style="text-align:center;color:#A09890;padding:24px">No orders this month</td></tr>`;
+  document.getElementById('invoice-doc').innerHTML=`
+    <div class="idoc-hd">
+      <div>
+        <div class="idoc-biz">Shane's <em>Online Shop</em></div>
+        <div class="idoc-biz-sub">쉐인 온라인샵 · 구매대행 &amp; 재고판매</div>
+      </div>
+      <div class="idoc-title">
+        <div class="idoc-title-ko">거래명세서</div>
+        <div class="idoc-title-en">INVOICE</div>
+      </div>
+    </div>
+    <div class="idoc-meta">
+      <div class="idoc-meta-item"><div class="idoc-meta-lbl">Document No.</div><div class="idoc-meta-val">${invNo}</div></div>
+      <div class="idoc-meta-item"><div class="idoc-meta-lbl">Issue Date / 발행일</div><div class="idoc-meta-val">${nowDate()}</div></div>
+      <div class="idoc-meta-item"><div class="idoc-meta-lbl">Billing Period / 청구기간</div><div class="idoc-meta-val">${yr}.${mn} (${MN[parseInt(mn)-1]})</div></div>
+    </div>
+    <div class="idoc-billto">
+      <div>
+        <div class="idoc-bt-lbl">Bill To / 청구처</div>
+        <div class="idoc-bt-name">${c.name}</div>
+        <div class="idoc-bt-info">
+          ${c.contact?c.contact+'<br>':''}
+          ${c.address?(c.address+(c.address2?' '+c.address2:''))+'<br>':''}
+          ${c.sns||''}
+        </div>
+      </div>
+      <div class="idoc-stamp ${isOut?'due':'paid'}">${isOut?'미\n정산':'정산\n완료'}</div>
+    </div>
+    <table class="idoc-table">
+      <thead><tr><th style="width:32px">#</th><th>Description / 상품명</th><th style="text-align:center;width:50px">Qty</th><th class="r" style="width:120px">Amount</th></tr></thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <div class="idoc-totals">
+      <div class="idoc-trow"><span>Subtotal / 소계</span><span id="idoc-sub" style="font-family:'DM Mono',monospace">${won(subtotal)}</span></div>
+      <div class="idoc-trow">
+        <span>Shipping / 배송비</span>
+        <input type="number" id="idoc-ship" value="0" min="0" placeholder="0원" oninput="calcInvTotal(${subtotal})">
+      </div>
+      <div class="idoc-trow"><span>Total / 합계</span><span id="idoc-total" style="font-family:'DM Mono',monospace;color:#C8521A">${won(subtotal)}</span></div>
+    </div>
+    <div class="idoc-foot">
+      <div>
+        <div>결제 방식 / Payment Method: <strong>${payLabel[c.payment]||c.payment}</strong></div>
+        ${isOut?`<div style="color:#9A6B0A;margin-top:4px">미수금 / Outstanding: <strong>${won(c.outstanding)}</strong></div>`:'<div style="color:#2D7A4F;margin-top:4px">✓ 정산 완료 / Settled</div>'}
+      </div>
+      <div style="font-size:10px;color:#A09890;text-align:right">Shane's Online Shop<br>Thank you for your business!</div>
+    </div>`;
+  openModal('modal-invoice-view');
+}
+function calcInvTotal(sub){
+  const ship=Number(document.getElementById('idoc-ship')?.value||0);
+  const el=document.getElementById('idoc-total');
+  if(el)el.textContent=won(sub+ship);
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
