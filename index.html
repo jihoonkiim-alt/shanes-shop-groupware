@@ -469,7 +469,8 @@ tr:hover td{background:var(--bg)}
     <div class="field"><label><span class="lk">Full Name / 이름</span></label><input type="text" id="c-name"></div>
     <div class="field"><label><span class="lk">Phone / 연락처</span></label><input type="text" id="c-contact" placeholder="010-xxxx-xxxx or +63-xxx"></div>
   </div>
-  <div class="field"><label><span class="lk">Delivery Address / 배송지 주소</span></label><input type="text" id="c-address" placeholder="Full delivery address"></div>
+  <div class="field"><label><span class="lk">Address / 주소</span><span class="le">City, district, street</span></label><input type="text" id="c-address" placeholder="e.g. 서울시 강남구 테헤란로 123"></div>
+  <div class="field"><label><span class="lk">Address Detail / 상세주소</span><span class="le">Building, floor, unit number</span></label><input type="text" id="c-address2" placeholder="e.g. 101동 502호"></div>
   <div class="field"><label><span class="lk">SNS / Facebook</span><span class="le">Facebook name or messenger link</span></label><input type="text" id="c-sns" placeholder="e.g. fb.com/username"></div>
   <div class="grid2">
     <div class="field"><label><span class="lk">Customer Type / 고객 유형</span></label>
@@ -801,6 +802,7 @@ async function saveCustomer(){
   const c={id:newId(customers),name,
     contact:document.getElementById('c-contact').value,
     address:document.getElementById('c-address').value,
+    address2:document.getElementById('c-address2').value,
     sns:document.getElementById('c-sns').value,
     type:document.getElementById('c-type').value,
     creditLimit:Number(document.getElementById('c-limit').value)||0,
@@ -808,7 +810,7 @@ async function saveCustomer(){
     note:document.getElementById('c-note').value,
     outstanding:0};
   customers.push(c);LS.set('customers',customers);
-  await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,sns:c.sns,
+  await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
     type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
   closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');
 }
@@ -1038,7 +1040,7 @@ function renderInvoices(){
       const profitRow=Number(o.charge)-totalCostRow;
       return`<div class="inv-detail-row">
         <span class="mono" style="font-size:10px">${o.date.slice(5)}</span>
-        <span>${o.desc||'—'}${o.platform?` <span class="plat plat-${o.platform}" style="margin-left:4px">${{coupang:'Coupang',naver:'Naver',nsmall:'NS',domeggook:'Domeggook',other:'Other'}[o.platform]||o.platform}</span>`:''}</span>
+        <span>${o.desc||'—'}</span>
         <span class="mono">${o.qty||1}</span>
         <span class="mono">${o.type==='proxy'?won(totalCostRow):'<span style="color:var(--text3)">—</span>'}</span>
         <span class="mono" style="font-weight:600">${won(o.charge)}</span>
@@ -1091,7 +1093,7 @@ function renderCustomers(q){
     const creditWarn=c.creditLimit>0&&out>c.creditLimit?` <span style="color:var(--red);font-size:9px">⚠ Over limit</span>`:'';
     return`<tr>
       <td><strong>${c.name}</strong>${c.sns?`<br><span style="font-size:9px;color:var(--blue)">${c.sns}</span>`:''}${c.note?`<br><span style="font-size:10px;color:var(--text3)">${c.note}</span>`:''}</td>
-      <td style="font-size:11px"><div style="color:var(--text2)">${c.contact||'—'}</div>${c.address?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${c.address}</div>`:''}</td>
+      <td style="font-size:11px"><div style="color:var(--text2)">${c.contact||'—'}</div>${c.address?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${c.address}${c.address2?' '+c.address2:''}</div>`:''}</td>
       <td>${ctBadge(c.type||'retail')}</td>
       <td>${pBadge(c.payment)}</td>
       <td class="mono">${won(ma)}</td>
@@ -1168,7 +1170,7 @@ function ordersFlat(){
 function dlAll(){
   xlsxDownload([
     {name:'Orders',data:ordersFlat()},
-    {name:'Customers',data:customers.map(c=>({ID:c.id,Name:c.name,Contact:c.contact,Address:c.address||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'Outstanding(₩)':c.outstanding||0,Note:c.note||''}))},
+    {name:'Customers',data:customers.map(c=>({ID:c.id,Name:c.name,Contact:c.contact,Address:c.address||'',AddressDetail:c.address2||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'Outstanding(₩)':c.outstanding||0,Note:c.note||''}))},
     {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'Price(₩)':p.price,Stock:p.stock,MinStock:p.minStock,Note:p.note||''}))},
     {name:'StockMovements',data:inouts.map(io=>{const p=getP(io.productId);return{Date:io.date,Product:p?p.name:'?',Type:io.type,Qty:io.qty,Note:io.note||''}})},
     {name:'Expenses',data:expenses.map(e=>({Date:e.date,Type:e.type,'Amount(₩)':e.amount,Note:e.note||''}))},
@@ -1214,7 +1216,7 @@ function dlCustomers(){
   xlsxDownload([
     {name:'Customers',data:customers.map(c=>{
       const mo=thisMO().filter(o=>o.customerId==c.id).reduce((s,o)=>s+Number(o.charge),0);
-      return{ID:c.id,Name:c.name,Contact:c.contact||'',Address:c.address||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'ThisMonth(₩)':mo,'Outstanding(₩)':c.outstanding||0,Note:c.note||''};
+      return{ID:c.id,Name:c.name,Contact:c.contact||'',Address:c.address||'',AddressDetail:c.address2||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'ThisMonth(₩)':mo,'Outstanding(₩)':c.outstanding||0,Note:c.note||''};
     })},
   ],`shanes-customers-${fmtDate()}.xlsx`);
   toast('✓ Downloaded: Customers');
@@ -1227,7 +1229,7 @@ function dlInvoices(){
     const cOrders=mo.filter(o=>o.customerId==c.id);
     if(!cOrders.length)return;
     cOrders.forEach(o=>{
-      rows.push({Month:month,Customer:c.name,Contact:c.contact||'',Address:c.address||'',Date:o.date,Item:o.desc,Type:o.type,Platform:o.platform||'','Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge,Payment:o.payment,Status:o.proxyStatus||''});
+      rows.push({Month:month,Customer:c.name,Contact:c.contact||'',Address:(c.address||'')+(c.address2?' '+c.address2:''),Date:o.date,Item:o.desc,Type:o.type,'Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge,Payment:o.payment,Status:o.proxyStatus||''});
     });
     rows.push({Month:'',Customer:'',Contact:'',Address:'',Date:'',Item:'SUBTOTAL — '+c.name,Type:'','Cost(₩)':cOrders.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0),'Charged(₩)':cOrders.reduce((s,o)=>s+Number(o.charge),0),Payment:'',Status:''});
     rows.push({});
