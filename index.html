@@ -589,15 +589,16 @@ let products=LS.get('products'),inouts=LS.get('inouts'),orders=LS.get('orders'),
     calYear,calMonth;
 
 /* ── SHEETS API ────────────────────────────────────────────────────────── */
+let _gsReqN=0;
 function sheetsReq(action,payload={}){
   return new Promise(resolve=>{
     if(!SCRIPT_URL){resolve(null);return}
-    const cb='gs_'+Date.now();
+    const cb='gs_'+Date.now()+'_'+(++_gsReqN);
     const p=new URLSearchParams({action,callback:cb});
     if(payload.sheet)p.set('sheet',payload.sheet);
     if(payload.id!==undefined)p.set('id',payload.id);
-    if(payload.row)p.set('row',encodeURIComponent(JSON.stringify(payload.row)));
-    if(payload.updates)p.set('updates',encodeURIComponent(JSON.stringify(payload.updates)));
+    if(payload.row)p.set('row',JSON.stringify(payload.row));
+    if(payload.updates)p.set('updates',JSON.stringify(payload.updates));
     if(payload.rows)p.set('rows',payload.rows);
     const s=document.createElement('script');
     const t=setTimeout(()=>{cleanup();resolve(null)},10000);
