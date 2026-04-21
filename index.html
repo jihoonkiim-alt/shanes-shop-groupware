@@ -460,37 +460,37 @@ tr:hover td{background:var(--bg)}
 <!-- MODAL: Order -->
 <div class="modal-overlay" id="overlay-order" onclick="if(event.target===this)closeModal('modal-order')">
 <div class="modal modal-lg" id="modal-order">
-  <div class="mth"><div class="me">New Order</div><div class="mk">재고 판매 또는 구매대행 주문 등록</div></div>
+  <div class="mth"><div class="me">New Order</div><div class="mk">Stock Sale or Proxy Purchase</div></div>
   <div style="display:flex;gap:6px;margin-bottom:14px">
-    <button class="tt-sm" id="tt-stock" onclick="setOrderType('stock')">📦 재고판매</button>
-    <button class="tt-sm" id="tt-proxy" onclick="setOrderType('proxy')">🛒 구매대행</button>
+    <button class="tt-sm" id="tt-stock" onclick="setOrderType('stock')">📦 Stock Sale <span style="font-weight:400;opacity:.7">재고판매</span></button>
+    <button class="tt-sm" id="tt-proxy" onclick="setOrderType('proxy')">🛒 Proxy <span style="font-weight:400;opacity:.7">구매대행</span></button>
   </div>
-  <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="o-date"></div>
+  <div class="field"><label><span class="lk">Date</span></label><input type="date" id="o-date"></div>
   <div class="field" style="position:relative">
-    <label><span class="lk">Customer / 고객</span></label>
+    <label><span class="lk">Customer</span></label>
     <input type="text" id="o-customer-text" placeholder="Type to search customer..." autocomplete="off" oninput="filterCustomerAC(this.value)" onblur="hideACAfterDelay()">
     <input type="hidden" id="o-customer">
     <div id="o-customer-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:9999;max-height:220px;overflow-y:auto;margin-top:4px"></div>
   </div>
   <div id="stock-fields">
-    <div class="order-lines-hd"><span style="flex:1">상품</span><span style="width:52px;text-align:center">수량</span><span style="width:82px;text-align:right">단가</span><span style="width:64px;text-align:right">합계</span><span style="width:57px"></span></div>
+    <div class="order-lines-hd"><span style="flex:1">Product</span><span style="width:52px;text-align:center">Qty</span><span style="width:82px;text-align:right">Unit Price</span><span style="width:64px;text-align:right">Total</span><span style="width:57px"></span></div>
     <div id="stock-lines"></div>
   </div>
   <div id="proxy-fields">
-    <div class="order-lines-hd"><span style="flex:1">상품명·내용</span><span style="width:82px;text-align:right">원가</span><span style="width:82px;text-align:right">청구액</span><span style="width:100px">플랫폼</span><span style="width:57px"></span></div>
+    <div class="order-lines-hd"><span style="flex:1">Item</span><span style="width:82px;text-align:right">Cost</span><span style="width:82px;text-align:right">Charge</span><span style="width:100px">Platform</span><span style="width:57px"></span></div>
     <div id="proxy-lines"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">배송비 (₩)</span></label><input type="number" id="o-ship" placeholder="0"></div>
-      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Status</span></label>
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Shipping (₩)</span></label><input type="number" id="o-ship" placeholder="0"></div>
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Proxy Status</span></label>
         <select id="o-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select>
       </div>
     </div>
   </div>
   <hr class="divider">
-  <div class="field"><label><span class="lk">Payment / 결제</span></label>
+  <div class="field"><label><span class="lk">Payment</span></label>
     <select id="o-payment"><option value="credit">On Credit (Month-end)</option><option value="cash">Cash</option><option value="transfer">Bank Transfer</option></select>
   </div>
-  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="배송지, 특이사항..."></div>
+  <div class="field"><label><span class="lk">Note</span></label><input type="text" id="o-note" placeholder="Delivery address, special requests..."></div>
   <div class="mact">
     <button class="btn" onclick="closeModal('modal-order')">Cancel</button>
     <button class="btn btn-p" style="padding:10px 28px;font-size:13px" onclick="saveOrder()">Save Order</button>
@@ -878,12 +878,12 @@ function setOrderType(t){
 }
 
 function renderStockLine(line={}){
-  const opts=products.map(p=>`<option value="${p.id}"${p.id==line.pid?' selected':''}>${p.name} (재고:${p.stock})</option>`).join('');
+  const opts=products.map(p=>`<option value="${p.id}"${p.id==line.pid?' selected':''}>${p.name} (stock:${p.stock})</option>`).join('');
   const unit=line.unit||'';
   const qty=line.qty||1;
   const total=unit&&qty?'₩'+(qty*unit).toLocaleString():'₩0';
   return `<div class="order-line">
-    <select class="ol-product" onchange="fillLinePrice(this)"><option value="">상품 선택...</option>${opts}</select>
+    <select class="ol-product" onchange="fillLinePrice(this)"><option value="">Select product...</option>${opts}</select>
     <input type="number" class="ol-qty" value="${qty}" min="1" oninput="calcLineTotal(this)" style="width:52px;text-align:center">
     <input type="number" class="ol-unit" value="${unit}" readonly style="width:82px;text-align:right">
     <span class="ol-total">${total}</span>
@@ -891,11 +891,11 @@ function renderStockLine(line={}){
     <button class="ol-del-btn" onclick="removeOrderLine(this)">×</button>
   </div>`;
 }
-const PLATFORM_OPTS=`<option value="">플랫폼</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="domeggook">Domeggook</option><option value="other">기타</option>`;
+const PLATFORM_OPTS=`<option value="">Platform...</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="domeggook">Domeggook</option><option value="other">Other</option>`;
 function renderProxyLine(line={}){
   const platSel=PLATFORM_OPTS.replace(`value="${line.platform||''}"`,`value="${line.platform||''}" selected`);
   return `<div class="order-line">
-    <input type="text" class="ol-desc" placeholder="상품명·내용" value="${line.desc||''}">
+    <input type="text" class="ol-desc" placeholder="Item description..." value="${line.desc||''}">
     <input type="number" class="ol-cost" placeholder="원가" value="${line.cost||''}" style="width:82px;text-align:right">
     <input type="number" class="ol-charge" placeholder="청구액" value="${line.charge||''}" style="width:82px;text-align:right">
     <select class="ol-platform" style="width:100px;height:32px;padding:0 6px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;background:#fff;outline:none">${PLATFORM_OPTS}</select>
