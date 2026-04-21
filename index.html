@@ -181,7 +181,7 @@ tr:hover td{background:var(--bg)}
 .cal-day.other-mo .cal-day-num{color:var(--text3)}
 .cal-day-num{font-size:11px;font-weight:600;margin-bottom:2px;display:block}
 .cal-ev{font-size:8px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}.ev-personal{background:#e8f5e9;color:#2e7d32;font-weight:500}.ev-admin{background:#fff3e0;color:#e65100;font-weight:500}.ev-holiday{background:#fde8e8;color:#c0392b;font-weight:600}
+.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}.ev-personal{background:#e8f5e9;color:#2e7d32;font-weight:500}.ev-admin{background:#ff6d00;color:#fff;font-weight:700}.ev-admin-dim{background:#f5e6d0;color:#a0632a;font-weight:400}.ev-holiday{background:#fde8e8;color:#c0392b;font-weight:600}
 .cal-day.is-sunday .cal-day-num{color:#c0392b}
 .cal-day.is-holiday .cal-day-num{color:#c0392b}
 .below-cal{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
@@ -1394,15 +1394,10 @@ function getHoliday(ds){
   return KR_FIXED[mmdd]||null;
 }
 /* ── Korean Self-Employed Admin Deadlines ─────────────────────────────── */
-const KR_ADMIN={
-  '01-25':'부가세 2기 확정신고',
-  '02-10':'사업장현황신고',
-  '04-25':'부가세 1기 예정신고',
-  '05-31':'종합소득세 신고',
-  '07-25':'부가세 1기 확정신고',
-  '10-25':'부가세 2기 예정신고'
-};
-function getAdminDeadline(ds){const mmdd=ds.slice(5);return KR_ADMIN[mmdd]||null;}
+/* hi=간이과세자 해당, lo=일반/면세과세자 해당 */
+const KR_ADMIN_HI={'01-25':'부가세 신고 (간이)','05-31':'종합소득세 신고'};
+const KR_ADMIN_LO={'02-10':'사업장현황신고','04-25':'부가세 1기 예정','07-25':'부가세 1기 확정','10-25':'부가세 2기 예정'};
+function getAdminDeadline(ds){const m=ds.slice(5);if(KR_ADMIN_HI[m])return{label:KR_ADMIN_HI[m],hi:true};if(KR_ADMIN_LO[m])return{label:KR_ADMIN_LO[m],hi:false};return null;}
 
 function renderCalendar(){
   const DK=['일','월','화','수','목','금','토'],DE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1427,7 +1422,7 @@ function renderCalendar(){
     const admin=getAdminDeadline(ds);
     let evH='';
     if(holiday)evH+=`<div class="cal-ev ev-holiday">${holiday}</div>`;
-    if(admin)evH+=`<div class="cal-ev ev-admin">${admin}</div>`;
+    if(admin)evH+=`<div class="cal-ev ev-admin${admin.hi?'':'-dim'}">${admin.label}</div>`;
     evH+=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.time?e.time+' ':''}${e.en||e.ko}</div>`).join('');
     if(dords.length)evH+=`<div class="cal-ev ev-order">${dords.length} order${dords.length>1?'s':''}</div>`;
     const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':''].filter(Boolean).join(' ');
