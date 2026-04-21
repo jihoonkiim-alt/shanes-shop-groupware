@@ -178,6 +178,15 @@ tr:hover td{background:var(--bg)}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-day{min-height:66px;border-radius:6px;padding:5px;cursor:pointer;border:1px solid transparent;overflow:hidden}
 .cal-day:hover{background:var(--bg)}.cal-day.today{border-color:var(--accent);background:var(--al)}.cal-day.cal-day-sel{border-color:var(--accent);background:var(--al);box-shadow:0 0 0 2px var(--accent)}
+.pg-wrap{display:flex;justify-content:center;align-items:center;gap:4px;padding:10px 0}
+.pg-btn{min-width:30px;height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:11px;cursor:pointer;font-weight:600;color:var(--text2)}
+.pg-btn.cur{background:var(--accent);color:#fff;border-color:var(--accent)}.pg-btn:hover:not(.cur){background:var(--bg)}
+.cust-name-link{cursor:pointer;color:var(--accent);text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s}.cust-name-link:hover{text-decoration-color:var(--accent)}
+.cdet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.cdet-tile{background:var(--bg);border-radius:8px;padding:10px 12px}
+.cdet-tile-label{font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.cdet-tile-val{font-size:13px;font-weight:600}
+.cdet-mo-hd{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
 .cal-day.other-mo .cal-day-num{color:var(--text3)}
 .cal-day-num{font-size:11px;font-weight:600;margin-bottom:2px;display:block}
 .cal-ev{font-size:8px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
@@ -372,7 +381,7 @@ tr:hover td{background:var(--bg)}
     <div class="dz-s">Drop .json file here or click to browse &nbsp;·&nbsp; Format: {"customers":[...]}</div>
   </label>
   <div class="search-wrap">
-    <input type="text" id="cust-search" placeholder="Search by name..." oninput="renderCustomers(this.value)">
+    <input type="text" id="cust-search" placeholder="Search by name, phone, address..." oninput="custPage=0;renderCustomers(this.value)">
     <select id="cust-sort" onchange="renderCustomers(document.getElementById('cust-search').value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
       <option value="name">Name A→Z</option>
       <option value="name-desc">Name Z→A</option>
@@ -384,14 +393,15 @@ tr:hover td{background:var(--bg)}
   </div>
   <div class="card"><table><thead><tr>
     <th><span class="te">Customer</span><span class="tk">고객명</span></th>
-    <th><span class="te">Contact / Address</span><span class="tk">연락처 / 주소</span></th>
+    <th><span class="te">Phone</span><span class="tk">연락처</span></th>
+    <th><span class="te">Address</span><span class="tk">주소</span></th>
     <th><span class="te">Type</span><span class="tk">고객유형</span></th>
     <th><span class="te">Payment</span><span class="tk">결제방식</span></th>
     <th><span class="te">This Month</span><span class="tk">이달 주문액</span></th>
     <th><span class="te">Outstanding</span><span class="tk">미수금</span></th>
     <th><span class="te">Status</span><span class="tk">상태</span></th>
     <th><span class="te">Action</span><span class="tk">관리</span></th>
-  </tr></thead><tbody id="customer-table"></tbody></table></div>
+  </tr></thead><tbody id="customer-table"></tbody></table><div id="cust-pagination" class="pg-wrap"></div></div>
 </div>
 
 <!-- INVOICES -->
@@ -550,6 +560,13 @@ tr:hover td{background:var(--bg)}
   <div class="field"><label><span class="lk">Credit Limit / 외상 한도 (₩)</span><span class="le">0 = no limit set</span></label><input type="number" id="c-limit" value="0"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><textarea id="c-note" placeholder="Special requests, preferences..."></textarea></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-customer')">Cancel</button><button class="btn btn-p" onclick="saveCustomer()">Save</button></div>
+</div>
+</div>
+
+<!-- MODAL: Customer Detail -->
+<div class="modal-overlay" id="overlay-customer-detail" onclick="if(event.target===this)closeModal('modal-customer-detail')">
+<div class="modal modal-lg" id="modal-customer-detail">
+  <div id="cust-detail-content"></div>
 </div>
 </div>
 
@@ -768,6 +785,7 @@ function openModal(id){
     document.getElementById('proxy-lines').innerHTML=renderProxyLine();
     setOrderType('stock');
   }
+  if(id==='modal-customer'){delete document.getElementById('modal-customer').dataset.editId;document.querySelector('#modal-customer .me').textContent='Add Customer';document.querySelector('#modal-customer .mk').textContent='고객 추가';['c-name','c-contact','c-address','c-address2','c-sns','c-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-type').value='retail';document.getElementById('c-payment').value='credit';document.getElementById('c-limit').value='0';}
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
   if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
@@ -1005,20 +1023,33 @@ async function saveInout(){
 async function saveCustomer(){
   const name=document.getElementById('c-name').value.trim();
   if(!name){alert('Enter customer name.');return}
-  const c={id:newId(customers),name,
-    contact:document.getElementById('c-contact').value,
-    address:document.getElementById('c-address').value,
-    address2:document.getElementById('c-address2').value,
-    sns:document.getElementById('c-sns').value,
-    type:document.getElementById('c-type').value,
-    creditLimit:Number(document.getElementById('c-limit').value)||0,
-    payment:document.getElementById('c-payment').value,
-    note:document.getElementById('c-note').value,
-    outstanding:0};
-  customers.push(c);LS.set('customers',customers);
-  await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
-    type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
-  closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');
+  const editId=document.getElementById('modal-customer').dataset.editId;
+  if(editId){
+    const c=customers.find(x=>x.id==Number(editId));
+    if(!c)return;
+    c.name=name;c.contact=document.getElementById('c-contact').value;c.address=document.getElementById('c-address').value;
+    c.address2=document.getElementById('c-address2').value;c.sns=document.getElementById('c-sns').value;
+    c.type=document.getElementById('c-type').value;c.creditLimit=Number(document.getElementById('c-limit').value)||0;
+    c.payment=document.getElementById('c-payment').value;c.note=document.getElementById('c-note').value;
+    LS.set('customers',customers);
+    await updateRow('Customers',c.id,{name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note});
+    closeModal('modal-customer');toast('✓ Customer updated');renderCustomers('');
+  } else {
+    const c={id:newId(customers),name,
+      contact:document.getElementById('c-contact').value,
+      address:document.getElementById('c-address').value,
+      address2:document.getElementById('c-address2').value,
+      sns:document.getElementById('c-sns').value,
+      type:document.getElementById('c-type').value,
+      creditLimit:Number(document.getElementById('c-limit').value)||0,
+      payment:document.getElementById('c-payment').value,
+      note:document.getElementById('c-note').value,
+      outstanding:0};
+    customers.push(c);LS.set('customers',customers);
+    await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
+      type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
+    closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');
+  }
 }
 
 /* ── EVENT ─────────────────────────────────────────────────────────────── */
@@ -1335,24 +1366,29 @@ function calcInvTotal(sub){
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
+let custPage=0;
+function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function renderCustomers(q){
   const mo=thisMO();
   const sort=(document.getElementById('cust-sort')||{}).value||'name';
-  let list=customers.filter(c=>!q||c.name.toLowerCase().includes(q.toLowerCase()));
+  let list=customers.filter(c=>!q||c.name.toLowerCase().includes(q.toLowerCase())||((c.contact||'').includes(q))||((c.address||'').toLowerCase().includes(q.toLowerCase())));
   if(sort==='name')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if(sort==='name-desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
   else if(sort==='type')list.sort((a,b)=>(a.type||'').localeCompare(b.type||''));
   else if(sort==='payment')list.sort((a,b)=>(a.payment||'').localeCompare(b.payment||''));
   else if(sort==='outstanding')list.sort((a,b)=>Number(b.outstanding||0)-Number(a.outstanding||0));
   else if(sort==='month'){const ma=id=>mo.filter(o=>o.customerId==id).reduce((s,o)=>s+Number(o.charge),0);list.sort((a,b)=>ma(b.id)-ma(a.id));}
-  const _list=list;
-  document.getElementById('customer-table').innerHTML=_list.length?_list.map(c=>{
+  const PAGE=25,total=list.length,pages=Math.max(1,Math.ceil(total/PAGE));
+  if(custPage>=pages)custPage=pages-1;
+  const pageList=list.slice(custPage*PAGE,(custPage+1)*PAGE);
+  document.getElementById('customer-table').innerHTML=pageList.length?pageList.map(c=>{
     const ma=mo.filter(o=>o.customerId==c.id).reduce((s,o)=>s+Number(o.charge),0);
     const out=Number(c.outstanding||0);
     const creditWarn=c.creditLimit>0&&out>c.creditLimit?` <span style="color:var(--red);font-size:9px">⚠ Over limit</span>`:'';
     return`<tr>
-      <td><strong>${c.name}</strong>${c.sns?`<br><span style="font-size:9px;color:var(--blue)">${c.sns}</span>`:''}${c.note?`<br><span style="font-size:10px;color:var(--text3)">${c.note}</span>`:''}</td>
-      <td style="font-size:11px"><div style="color:var(--text2)">${c.contact||'—'}</div>${c.address?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${c.address}${c.address2?' '+c.address2:''}</div>`:''}</td>
+      <td><strong class="cust-name-link" onclick="openCustomerDetail(${c.id})">${c.name}</strong>${c.sns?`<br><span style="font-size:9px;color:var(--blue)">${c.sns}</span>`:''}</td>
+      <td style="font-size:11px;color:var(--text2)">${c.contact||'—'}</td>
+      <td style="font-size:11px;color:var(--text2)">${c.address?c.address+(c.address2?' '+c.address2:''):'—'}</td>
       <td>${ctBadge(c.type||'retail')}</td>
       <td>${pBadge(c.payment)}</td>
       <td class="mono">${won(ma)}</td>
@@ -1360,7 +1396,60 @@ function renderCustomers(q){
       <td>${out>0?'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>':'<span class="badge bg-green"><span class="bk">Clear</span><span class="be">정상</span></span>'}</td>
       <td style="white-space:nowrap">${out>0?`<button class="btn btn-xs btn-g" style="margin-right:3px" onclick="settleCredit(${c.id})">Settle</button>`:''}<button class="btn btn-xs btn-d" onclick="deleteCustomer(${c.id})">Del</button></td>
     </tr>`;
-  }).join(''):'<tr><td colspan="8" class="empty">No customers found</td></tr>';
+  }).join(''):`<tr><td colspan="9" class="empty">No customers found</td></tr>`;
+  const pg=document.getElementById('cust-pagination');
+  if(pg)pg.innerHTML=pages>1?`<span style="font-size:11px;color:var(--text3);margin-right:6px">${total}명 / ${custPage*PAGE+1}–${Math.min((custPage+1)*PAGE,total)}</span>`+Array.from({length:pages},(_,i)=>`<button class="pg-btn${i===custPage?' cur':''}" onclick="changeCustPage(${i})">${i+1}</button>`).join(''):'';
+}
+
+function openCustomerDetail(id){
+  const c=customers.find(x=>x.id==id);if(!c)return;
+  const cOrds=orders.filter(o=>o.customerId==id).sort((a,b)=>b.date.localeCompare(a.date));
+  const out=Number(c.outstanding||0);
+  const totalSpent=cOrds.reduce((s,o)=>s+Number(o.charge),0);
+  const byMonth={};
+  cOrds.forEach(o=>{const mo=o.date.slice(0,7);if(!byMonth[mo])byMonth[mo]={count:0,total:0};byMonth[mo].count++;byMonth[mo].total+=Number(o.charge);});
+  const monthRows=Object.entries(byMonth).sort((a,b)=>b[0].localeCompare(a[0])).map(([mo,{count,total}])=>
+    `<tr><td class="mono" style="font-size:12px;padding:5px 8px">${mo}</td><td style="font-size:12px;padding:5px 8px">${count} order${count>1?'s':''}</td><td class="mono" style="font-size:12px;padding:5px 8px;text-align:right;color:var(--accent);font-weight:600">${won(total)}</td></tr>`
+  ).join('');
+  document.getElementById('cust-detail-content').innerHTML=`
+    <div class="mth"><div class="me">${c.name}</div><div class="mk" style="display:flex;gap:6px;align-items:center">${ctBadge(c.type||'retail')} ${pBadge(c.payment)}</div></div>
+    <div class="cdet-grid">
+      <div class="cdet-tile"><div class="cdet-tile-label">Phone / 연락처</div><div class="cdet-tile-val">${c.contact||'—'}</div></div>
+      <div class="cdet-tile" style="grid-column:1/-1"><div class="cdet-tile-label">Address / 주소</div><div class="cdet-tile-val" style="font-size:12px">${c.address||'—'}${c.address2?' '+c.address2:''}</div></div>
+      ${c.sns?`<div class="cdet-tile"><div class="cdet-tile-label">SNS</div><div class="cdet-tile-val" style="color:var(--blue);font-size:12px">${c.sns}</div></div>`:''}
+      <div class="cdet-tile"><div class="cdet-tile-label">Total Spent / 누적 주문액</div><div class="cdet-tile-val" style="color:var(--accent)">${won(totalSpent)}</div></div>
+      <div class="cdet-tile"><div class="cdet-tile-label">Outstanding / 미수금</div><div class="cdet-tile-val" style="color:${out>0?'var(--amber)':'var(--green)'}">${won(out)}</div></div>
+      ${c.creditLimit>0?`<div class="cdet-tile"><div class="cdet-tile-label">Credit Limit / 외상 한도</div><div class="cdet-tile-val">${won(c.creditLimit)}</div></div>`:''}
+      ${c.note?`<div class="cdet-tile" style="grid-column:1/-1"><div class="cdet-tile-label">Note / 메모</div><div class="cdet-tile-val" style="font-size:12px;font-weight:400">${c.note}</div></div>`:''}
+    </div>
+    <div class="cdet-mo-hd">Monthly Orders / 월별 주문 현황</div>
+    ${monthRows?`<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden"><thead><tr style="background:var(--bg)"><th style="text-align:left;font-size:10px;padding:6px 8px;font-weight:700">Month</th><th style="text-align:left;font-size:10px;padding:6px 8px;font-weight:700">Orders</th><th style="text-align:right;font-size:10px;padding:6px 8px;font-weight:700">Amount</th></tr></thead><tbody>${monthRows}</tbody></table>`:'<div class="empty">No orders yet</div>'}
+    <div class="mact" style="margin-top:14px">
+      <button class="btn" onclick="closeModal('modal-customer-detail')">Close</button>
+      ${out>0?`<button class="btn btn-g" onclick="settleCredit(${c.id});closeModal('modal-customer-detail')">Settle ${won(out)}</button>`:''}
+      <button class="btn btn-p" onclick="openEditCustomer(${c.id})">Edit / 수정</button>
+    </div>`;
+  document.getElementById('overlay-customer-detail').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
+
+function openEditCustomer(id){
+  const c=customers.find(x=>x.id==id);if(!c)return;
+  closeModal('modal-customer-detail');
+  document.getElementById('c-name').value=c.name||'';
+  document.getElementById('c-contact').value=c.contact||'';
+  document.getElementById('c-address').value=c.address||'';
+  document.getElementById('c-address2').value=c.address2||'';
+  document.getElementById('c-sns').value=c.sns||'';
+  document.getElementById('c-type').value=c.type||'retail';
+  document.getElementById('c-payment').value=c.payment||'credit';
+  document.getElementById('c-limit').value=c.creditLimit||0;
+  document.getElementById('c-note').value=c.note||'';
+  document.getElementById('modal-customer').dataset.editId=id;
+  document.querySelector('#modal-customer .me').textContent='Edit Customer';
+  document.querySelector('#modal-customer .mk').textContent='고객 정보 수정';
+  document.getElementById('overlay-customer').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
 }
 
 /* ── RENDER: CALENDAR ──────────────────────────────────────────────────── */
