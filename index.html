@@ -181,7 +181,9 @@ tr:hover td{background:var(--bg)}
 .cal-day.other-mo .cal-day-num{color:var(--text3)}
 .cal-day-num{font-size:11px;font-weight:600;margin-bottom:2px;display:block}
 .cal-ev{font-size:8px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}
+.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}.ev-holiday{background:#fde8e8;color:#c0392b;font-weight:600}
+.cal-day.is-sunday .cal-day-num{color:#c0392b}
+.cal-day.is-holiday .cal-day-num{color:#c0392b}
 .below-cal{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 .ev-item{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;gap:9px;align-items:flex-start}
 .ev-item:last-child{border-bottom:none}
@@ -1361,13 +1363,41 @@ function renderCustomers(q){
 function initCal(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()}
+/* ── Korean Public Holidays ───────────────────────────────────────────── */
+const KR_FIXED={
+  '01-01':'New Year\'s',
+  '03-01':'Independence Day',
+  '05-05':'Children\'s Day',
+  '06-06':'Memorial Day',
+  '08-15':'Liberation Day',
+  '10-03':'Foundation Day',
+  '10-09':'Hangul Day',
+  '12-25':'Christmas'
+};
+const KR_LUNAR={
+  '2025-01-28':'설날 연휴','2025-01-29':'설날','2025-01-30':'설날 연휴',
+  '2025-05-05':'부처님오신날','2025-05-06':'대체공휴일',
+  '2025-10-05':'추석 연휴','2025-10-06':'추석','2025-10-07':'추석 연휴','2025-10-08':'대체공휴일',
+  '2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+  '2026-03-02':'대체공휴일',
+  '2026-05-24':'부처님오신날',
+  '2026-08-17':'대체공휴일',
+  '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴','2026-09-28':'대체공휴일',
+  '2026-10-05':'대체공휴일'
+};
+function getHoliday(ds){
+  if(KR_LUNAR[ds])return KR_LUNAR[ds];
+  const mmdd=ds.slice(5);
+  return KR_FIXED[mmdd]||null;
+}
+
 function renderCalendar(){
   const DK=['일','월','화','수','목','금','토'],DE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MK=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const ME=['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('cal-mk').textContent=`${calYear}년 ${MK[calMonth]}`;
   document.getElementById('cal-me').textContent=`${ME[calMonth]} ${calYear}`;
-  document.getElementById('cal-dh').innerHTML=DK.map((d,i)=>`<div class="cdn"><span class="dk">${d}</span><span class="de">${DE[i]}</span></div>`).join('');
+  document.getElementById('cal-dh').innerHTML=DK.map((d,i)=>`<div class="cdn"><span class="dk" style="${i===0?'color:#c0392b':''}">${d}</span><span class="de" style="${i===0?'color:#c0392b':''}">${DE[i]}</span></div>`).join('');
   const first=new Date(calYear,calMonth,1).getDay(),last=new Date(calYear,calMonth+1,0).getDate(),today=new Date();
   const ym=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const mevs=events.filter(e=>e.date&&e.date.startsWith(ym)),mords=orders.filter(o=>o.date&&o.date.startsWith(ym));
@@ -1375,22 +1405,31 @@ function renderCalendar(){
   for(let i=0;i<first;i++){const d=new Date(calYear,calMonth,0-first+i+1).getDate();html+=`<div class="cal-day other-mo"><span class="cal-day-num">${d}</span></div>`}
   for(let d=1;d<=last;d++){
     const ds=`${ym}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(calYear,calMonth,d).getDay();
     const isT=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    const holiday=getHoliday(ds);
+    const isSun=dow===0;
     const devs=mevs.filter(e=>e.date===ds);
     const dords=mords.filter(o=>o.date===ds);
-    let evH=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.en||e.ko}</div>`).join('');
+    let evH='';
+    if(holiday)evH+=`<div class="cal-ev ev-holiday">${holiday}</div>`;
+    evH+=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.en||e.ko}</div>`).join('');
     if(dords.length)evH+=`<div class="cal-ev ev-order">${dords.length} order${dords.length>1?'s':''}</div>`;
-    html+=`<div class="cal-day${isT?' today':''}"><span class="cal-day-num">${d}</span>${evH}</div>`;
+    const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':''].filter(Boolean).join(' ');
+    html+=`<div class="${cls}"><span class="cal-day-num">${d}</span>${evH}</div>`;
   }
   document.getElementById('cal-days').innerHTML=html;
   const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)'};
   document.getElementById('event-list').innerHTML=mevs.length?[...mevs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>
     `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko}</div><div class="ev-id">${e.date}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`
   ).join(''):'<div class="empty">No events this month</div>';
-  document.getElementById('billing-queue').innerHTML=customers.filter(c=>c.payment==='credit'||c.payment==='mixed').map(c=>{
+  const bqItems=customers.map(c=>{
     const amt=mords.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
-    return`<div class="ev-item"><div class="ev-dot" style="background:${amt>0?'var(--amber)':'var(--border2)'}"></div><div><div class="ev-ik">${c.name}</div><div class="ev-ie">${c.payment==='mixed'?'Mixed':'On Credit'}</div></div><div class="mono" style="margin-left:auto;color:${amt>0?'var(--amber)':'var(--text3)'}">${won(amt)}</div></div>`;
-  }).join('')||'<div class="empty">No credit customers</div>';
+    return{c,amt};
+  }).filter(({c,amt})=>Number(c.outstanding)>0||amt>0);
+  document.getElementById('billing-queue').innerHTML=bqItems.map(({c,amt})=>
+    `<div class="ev-item"><div class="ev-dot" style="background:var(--amber)"></div><div><div class="ev-ik">${c.name}</div><div class="ev-ie">This month: ${won(amt)}${c.outstanding>0?' · Total due: '+won(c.outstanding):''}</div></div><div class="mono" style="margin-left:auto;color:var(--amber)">${won(c.outstanding||amt)}</div></div>`
+  ).join('')||'<div class="empty">No outstanding balances</div>';
 }
 
 /* ── DATE HEADER ───────────────────────────────────────────────────────── */
