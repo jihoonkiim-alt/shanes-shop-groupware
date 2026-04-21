@@ -380,11 +380,11 @@ tr:hover td{background:var(--bg)}
 <!-- CUSTOMERS -->
 <div class="sec" id="tab-customers">
   <div class="ph"><div><div class="pte">Customer Management</div><div class="ptk">고객 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-customer')">+ Add Customer</button><button class="btn" id="push-customers-btn" onclick="pushCustomersToSheets()">↑ Push to Sheets</button><button class="btn" onclick="dlCustomers()">⬇ .xlsx</button></div></div>
-  <label class="dropzone" id="import-dropzone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)" onclick="document.getElementById('import-file').click()">
-    <input type="file" id="import-file" accept=".json" onchange="importCustomersJSON(this)">
-    <div class="dz-icon">📂</div>
-    <div class="dz-t">Import Customers JSON</div>
-    <div class="dz-s">Drop .json file here or click to browse &nbsp;·&nbsp; Format: {"customers":[...]}</div>
+  <label class="dropzone" id="import-dropzone" ondragover="dzOverXL(event)" ondragleave="dzLeaveXL(event)" ondrop="dzDropXL(event)" onclick="document.getElementById('import-file').click()">
+    <input type="file" id="import-file" accept=".xlsx,.xls" onchange="importCustomersXLSX(this)">
+    <div class="dz-icon">📊</div>
+    <div class="dz-t">Import / Update Customers (.xlsx)</div>
+    <div class="dz-s">이름 기준으로 기존 고객 업데이트 · 신규는 자동 추가 &nbsp;·&nbsp; 헤더: Name, Contact, Address, Address2, Type, Payment, Note</div>
   </label>
   <div class="search-wrap">
     <input type="text" id="cust-search" placeholder="Search by name, phone, address..." oninput="custPage=0;renderCustomers(this.value)">
@@ -835,47 +835,59 @@ async function pushCustomersToSheets(){
   btn.textContent='↑ Push to Sheets';btn.disabled=false;
 }
 
-/* ── CUSTOMER IMPORT ────────────────────────────────────────────────────── */
-function importCustomersJSON(input){
+/* ── CUSTOMER IMPORT (XLSX) ─────────────────────────────────────────────── */
+function importCustomersXLSX(input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const data=JSON.parse(e.target.result);
-      if(Array.isArray(data.customers)&&data.customers.length){
-        customers=data.customers;LS.set('customers',customers);
-        renderCustomers('');
-        toast(`✓ ${customers.length} customers imported — pushing to Sheets...`);
-        if(SCRIPT_URL)pushCustomersToSheets();
-      } else {
-        toast('⚠ Invalid format — expected {"customers":[...]}');
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('⚠ No data found');input.value='';return;}
+      function mf(row,keys){
+        const rl={};Object.keys(row).forEach(k=>rl[k.toLowerCase().trim()]=row[k]);
+        for(const k of keys){const v=rl[k.toLowerCase()];if(v!==undefined&&String(v).trim()!='')return String(v).trim();}
+        return '';
       }
-    }catch{toast('⚠ Failed to parse JSON')}
+      let added=0,updated=0;
+      rows.forEach(row=>{
+        const name=mf(row,['name','이름','full name','고객명','customer']);
+        if(!name)return;
+        const contact=mf(row,['contact','phone','연락처','전화번호','핸드폰']);
+        const address=mf(row,['address','주소','addr']);
+        const address2=mf(row,['address2','상세주소','address detail','addr2']);
+        const sns=mf(row,['sns','facebook','fb']);
+        const type=mf(row,['type','고객유형','customer type'])||'retail';
+        const creditLimit=Number(mf(row,['creditlimit','credit limit','외상한도','credit']))||0;
+        const payment=mf(row,['payment','결제방식','결제'])||'credit';
+        const note=mf(row,['note','메모','notes']);
+        const outstanding=Number(mf(row,['outstanding','미수금']))||0;
+        const ex=customers.find(c=>c.name.trim().toUpperCase()===name.toUpperCase());
+        if(ex){
+          if(contact)ex.contact=contact;if(address)ex.address=address;if(address2)ex.address2=address2;
+          if(sns)ex.sns=sns;ex.type=type;ex.creditLimit=creditLimit;ex.payment=payment;if(note)ex.note=note;
+          updated++;
+        }else{
+          customers.push({id:newId(customers),name,contact,address,address2,sns,type,creditLimit,payment,note,outstanding});
+          added++;
+        }
+      });
+      LS.set('customers',customers);renderCustomers('');
+      toast(`✓ ${added} added · ${updated} updated — pushing to Sheets...`);
+      if(SCRIPT_URL)pushCustomersToSheets();
+    }catch(err){toast('⚠ Failed: '+err.message)}
     input.value='';
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 }
-function dzOver(e){e.preventDefault();document.getElementById('import-dropzone').classList.add('drag-over')}
-function dzLeave(e){document.getElementById('import-dropzone').classList.remove('drag-over')}
-function dzDrop(e){
-  e.preventDefault();
-  document.getElementById('import-dropzone').classList.remove('drag-over');
+function dzOverXL(e){e.preventDefault();document.getElementById('import-dropzone').classList.add('drag-over')}
+function dzLeaveXL(e){document.getElementById('import-dropzone').classList.remove('drag-over')}
+function dzDropXL(e){
+  e.preventDefault();document.getElementById('import-dropzone').classList.remove('drag-over');
   const file=e.dataTransfer.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const data=JSON.parse(ev.target.result);
-      if(Array.isArray(data.customers)&&data.customers.length){
-        customers=data.customers;LS.set('customers',customers);
-        renderCustomers('');
-        toast(`✓ ${customers.length} customers imported — pushing to Sheets...`);
-        if(SCRIPT_URL)pushCustomersToSheets();
-      } else {
-        toast('⚠ Invalid format — expected {"customers":[...]}');
-      }
-    }catch{toast('⚠ Failed to parse JSON')}
-  };
-  reader.readAsText(file);
+  try{const dt=new DataTransfer();dt.items.add(file);document.getElementById('import-file').files=dt.files;}catch{}
+  importCustomersXLSX({files:[file],value:''});
 }
 
 /* ── ORDER ─────────────────────────────────────────────────────────────── */
