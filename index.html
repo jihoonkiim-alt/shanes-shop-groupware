@@ -529,7 +529,7 @@ tr:hover td{background:var(--bg)}
   <div class="mth"><div class="me">Edit Order</div><div class="mk">주문 수정</div></div>
   <div style="display:flex;gap:10px;margin-bottom:10px">
     <div class="field" style="flex:1;margin:0"><label><span class="lk">Date</span></label><input type="date" id="eo-date"></div>
-    <div class="field" style="flex:2;margin:0"><label><span class="lk">Customer</span></label><input type="text" id="eo-customer-name" readonly style="background:var(--bg);color:var(--text3)"></div>
+    <div class="field" style="flex:2;margin:0;position:relative"><label><span class="lk">Customer</span></label><input type="text" id="eo-customer-text" placeholder="Type to search..." autocomplete="off" oninput="filterEOCustomerAC(this.value)" onblur="setTimeout(()=>{const a=document.getElementById('eo-customer-ac');if(a)a.style.display='none'},200)"><input type="hidden" id="eo-customer"><div id="eo-customer-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:9999;max-height:200px;overflow-y:auto;margin-top:4px"></div></div>
   </div>
   <div class="field"><label><span class="lk">Item / Description</span></label><input type="text" id="eo-desc"></div>
   <div id="eo-proxy-fields">
@@ -1199,11 +1199,20 @@ function dlOrderTemplate(){
 }
 
 /* ── ORDER EDIT ─────────────────────────────────────────────────────────── */
+function filterEOCustomerAC(q){
+  const ac=document.getElementById('eo-customer-ac');
+  if(!q.trim()){ac.style.display='none';return;}
+  const matches=customers.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!matches.length){ac.style.display='none';return;}
+  ac.innerHTML=matches.map(c=>`<div onclick="document.getElementById('eo-customer-text').value='${c.name.replace(/'/g,"\\'")}';document.getElementById('eo-customer').value=${c.id};document.getElementById('eo-customer-ac').style.display='none'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='#fff'"><div style="font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.contact||''}</div></div>`).join('');
+  ac.style.display='block';
+}
 function openEditOrder(id){
   const o=orders.find(x=>x.id==id);if(!o)return;
   const c=getC(o.customerId);
   document.getElementById('eo-date').value=o.date||'';
-  document.getElementById('eo-customer-name').value=c?c.name:'?';
+  document.getElementById('eo-customer-text').value=c?c.name:'';
+  document.getElementById('eo-customer').value=o.customerId||'';
   document.getElementById('eo-desc').value=o.desc||'';
   document.getElementById('eo-cost').value=o.cost||0;
   document.getElementById('eo-ship').value=o.shippingCost||0;
@@ -1223,10 +1232,12 @@ function openEditOrder(id){
 async function saveEditOrder(){
   const id=Number(document.getElementById('modal-edit-order').dataset.editId);
   const o=orders.find(x=>x.id==id);if(!o)return;
-  const oldCharge=Number(o.charge)||0,oldPayment=o.payment;
+  const oldCharge=Number(o.charge)||0,oldPayment=o.payment,oldCustId=o.customerId;
+  const newCustId=document.getElementById('eo-customer').value||o.customerId;
   const newCharge=Number(document.getElementById('eo-charge').value)||0;
   const newPayment=document.getElementById('eo-payment').value;
   o.date=document.getElementById('eo-date').value;
+  o.customerId=newCustId;
   o.desc=document.getElementById('eo-desc').value;
   o.cost=Number(document.getElementById('eo-cost').value)||0;
   o.shippingCost=Number(document.getElementById('eo-ship').value)||0;
@@ -1234,16 +1245,18 @@ async function saveEditOrder(){
   o.platform=document.getElementById('eo-platform').value;
   o.proxyStatus=document.getElementById('eo-proxy-status').value;
   o.note=document.getElementById('eo-note').value;
-  /* adjust outstanding */
-  const c=getC(o.customerId);
-  if(c){
-    let adj=0;
-    if(oldPayment==='credit')adj-=oldCharge;
-    if(newPayment==='credit')adj+=newCharge;
-    if(adj!==0){c.outstanding=(Number(c.outstanding)||0)+adj;LS.set('customers',customers);await updateRow('Customers',c.id,{outstanding:c.outstanding});}
+  /* adjust outstanding — handle customer change */
+  if(oldCustId!=newCustId){
+    const oldC=getC(oldCustId);
+    if(oldC&&oldPayment==='credit'){oldC.outstanding=(Number(oldC.outstanding)||0)-oldCharge;LS.set('customers',customers);await updateRow('Customers',oldC.id,{outstanding:oldC.outstanding});}
+    const newC=getC(newCustId);
+    if(newC&&newPayment==='credit'){newC.outstanding=(Number(newC.outstanding)||0)+newCharge;LS.set('customers',customers);await updateRow('Customers',newC.id,{outstanding:newC.outstanding});}
+  } else {
+    const c=getC(o.customerId);
+    if(c){let adj=0;if(oldPayment==='credit')adj-=oldCharge;if(newPayment==='credit')adj+=newCharge;if(adj!==0){c.outstanding=(Number(c.outstanding)||0)+adj;LS.set('customers',customers);await updateRow('Customers',c.id,{outstanding:c.outstanding});}}
   }
   LS.set('orders',orders);
-  await updateRow('Orders',id,{date:o.date,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
+  await updateRow('Orders',id,{date:o.date,customerId:o.customerId,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
   closeModal('modal-edit-order');toast('✓ Order updated');renderOrders();renderDash();
 }
 async function deleteOrder(id){if(!confirm('Delete this order?'))return;orders=orders.filter(o=>o.id!=id);LS.set('orders',orders);await deleteRow('Orders',id);toast('Deleted');renderOrders()}
