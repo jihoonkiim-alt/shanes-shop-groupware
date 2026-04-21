@@ -25,18 +25,21 @@ body{background:var(--bg)}
 
 /* TOPBAR */
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;gap:8px}
-.logo .lo-en{font-size:14px;font-weight:600}.logo .lo-en em{color:var(--accent);font-style:normal}
-.logo .lo-ko{font-size:10px;color:var(--text3)}
+.topbar-l{display:flex;align-items:center;gap:18px;flex-shrink:0}
+.logo .lo-en{font-size:17px;font-weight:700}.logo .lo-en em{color:var(--accent);font-style:normal}
+.logo .lo-ko{font-size:11px;color:var(--text3)}
 .nav{display:flex;gap:2px;flex-wrap:wrap}
 .nb{padding:6px 10px;border-radius:8px;border:none;background:none;font-family:inherit;cursor:pointer;transition:.15s;text-align:center;line-height:1.3}
 .nb:hover{background:var(--bg)}.nb.active{background:var(--al)}
-.nb .nk{display:block;font-size:8px;color:var(--text3)}
-.nb .ne{display:block;font-size:11px;font-weight:600;color:var(--text2)}
+.nb .nk{display:block;font-size:10px;color:var(--text3)}
+.nb .ne{display:block;font-size:13px;font-weight:600;color:var(--text2)}
 .nb.active .nk,.nb.active .ne{color:var(--accent)}
-.topbar-r{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.date-block .dk{font-size:11px;font-weight:500;color:var(--text2)}
-.date-block .de{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace}
-.sheets-btn{display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);transition:.15s;white-space:nowrap}
+.topbar-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.date-block .de{font-size:14px;font-weight:700;color:var(--text2)}
+.date-block .dt{font-size:12px;font-weight:600;color:var(--accent);font-family:'DM Mono',monospace;margin-left:8px}
+.date-block .dk{font-size:10px;color:var(--text3);margin-top:1px}
+.sync-warn{font-size:11px;font-weight:700;color:#fff;background:#e67e22;padding:5px 11px;border-radius:7px;white-space:nowrap;letter-spacing:.02em;cursor:default}
+.sheets-btn{display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:.15s;white-space:nowrap}
 .sheets-btn:hover{border-color:var(--border2);background:var(--bg)}
 .sheets-btn.connected{border-color:var(--gb);color:var(--green)}
 .sheets-btn.syncing{border-color:var(--ab);color:var(--accent)}
@@ -287,7 +290,10 @@ tr:hover td{background:var(--bg)}
 <body>
 <div class="app">
 <div class="topbar">
-  <div class="logo"><div class="lo-en">Shane's <em>Online Shop</em></div><div class="lo-ko">Shane's Finds · 쉐인 온라인샵</div></div>
+  <div class="topbar-l">
+    <div class="logo"><div class="lo-en">Shane's <em>Online Shop</em></div><div class="lo-ko">Shane's Finds · 쉐인 온라인샵</div></div>
+    <div class="date-block"><div style="display:flex;align-items:baseline"><div class="de" id="date-en"></div><div class="dt" id="date-time"></div></div><div class="dk" id="date-ko"></div></div>
+  </div>
   <div class="nav">
     <button class="nb active" onclick="showTab('dash')"><span class="ne">Dashboard</span><span class="nk">대시보드</span></button>
     <button class="nb" onclick="showTab('inventory')"><span class="ne">Inventory</span><span class="nk">재고</span></button>
@@ -298,7 +304,7 @@ tr:hover td{background:var(--bg)}
     <button class="nb" onclick="showTab('calendar')"><span class="ne">Calendar</span><span class="nk">캘린더</span></button>
   </div>
   <div class="topbar-r">
-    <div class="date-block"><div class="dk" id="date-ko"></div><div class="de" id="date-en"></div></div>
+    <div class="sync-warn">⚡ Always sync before closing!</div>
     <button class="sheets-btn" id="sync-btn" onclick="syncFromSheets()" title="Pull latest data from Google Sheets">↓ Sync</button>
     <button class="sheets-btn" id="sheets-btn" onclick="openModal('modal-setup')"><span class="sdot" id="sdot"></span><span id="sheets-lbl">Connect Sheets</span></button>
   </div>
@@ -1588,9 +1594,12 @@ function renderCalendar(){
 /* ── DATE HEADER ───────────────────────────────────────────────────────── */
 function setDateHeader(){
   const n=new Date();
-  document.getElementById('date-ko').textContent=n.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
-  document.getElementById('date-en').textContent=n.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+  const opt={timeZone:'Asia/Seoul'};
+  document.getElementById('date-en').textContent=n.toLocaleDateString('en-US',{...opt,weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('date-time').textContent=n.toLocaleTimeString('en-US',{...opt,hour:'numeric',minute:'2-digit',hour12:true})+' KST';
+  document.getElementById('date-ko').textContent=n.toLocaleDateString('ko-KR',{...opt,year:'numeric',month:'long',day:'numeric',weekday:'short'});
 }
+setInterval(setDateHeader,30000);
 
 /* ── XLSX DOWNLOAD ─────────────────────────────────────────────────────── */
 function xlsxDownload(sheets, filename){
