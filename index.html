@@ -685,13 +685,14 @@ async function syncFromSheets(silent=false){
   if(!SCRIPT_URL){if(!silent)toast('⚠ Set up Sheets URL first');return}
   if(!silent)setSS('syncing');
   const res=await sheetsReq('getAll');
+  const nd=v=>{if(!v)return v;const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);return isNaN(d)?s:d.toISOString().slice(0,10);};
   if(res&&res.ok){
     if(res.customers?.length){customers=res.customers;LS.set('customers',customers)}
     if(res.products?.length){products=res.products;LS.set('products',products)}
-    if(res.orders?.length){orders=res.orders;LS.set('orders',orders)}
-    if(res.inouts?.length){inouts=res.inouts;LS.set('inouts',inouts)}
-    if(res.events?.length){events=res.events;LS.set('events',events)}
-    if(res.expenses?.length){expenses=res.expenses;LS.set('expenses',expenses)}
+    if(res.orders?.length){orders=res.orders.map(o=>({...o,date:nd(o.date)}));LS.set('orders',orders)}
+    if(res.inouts?.length){inouts=res.inouts.map(o=>({...o,date:nd(o.date)}));LS.set('inouts',inouts)}
+    if(res.events?.length){events=res.events.map(e=>({...e,date:nd(e.date),dateEnd:nd(e.dateEnd||e.date)}));LS.set('events',events)}
+    if(res.expenses?.length){expenses=res.expenses.map(e=>({...e,date:nd(e.date)}));LS.set('expenses',expenses)}
     setSS('connected');
     if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
