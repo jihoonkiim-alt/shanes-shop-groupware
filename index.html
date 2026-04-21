@@ -649,9 +649,9 @@ function sheetsReq(action,payload={}){
     document.head.appendChild(s);
   });
 }
-async function syncFromSheets(){
-  if(!SCRIPT_URL){toast('⚠ Set up Sheets URL first');return}
-  setSS('syncing');
+async function syncFromSheets(silent=false){
+  if(!SCRIPT_URL){if(!silent)toast('⚠ Set up Sheets URL first');return}
+  if(!silent)setSS('syncing');
   const res=await sheetsReq('getAll');
   if(res&&res.ok){
     if(res.customers?.length){customers=res.customers;LS.set('customers',customers)}
@@ -660,7 +660,8 @@ async function syncFromSheets(){
     if(res.inouts?.length){inouts=res.inouts;LS.set('inouts',inouts)}
     if(res.events?.length){events=res.events;LS.set('events',events)}
     if(res.expenses?.length){expenses=res.expenses;LS.set('expenses',expenses)}
-    setSS('connected');toast('✓ Synced from Google Sheets');
+    setSS('connected');
+    if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
     const activeTab=document.querySelector('.sec.active');
     if(activeTab){
@@ -668,8 +669,9 @@ async function syncFromSheets(){
       else if(activeTab.id==='tab-inventory')renderInventory('');
       else if(activeTab.id==='tab-sales')renderOrders('');
       else if(activeTab.id==='tab-invoices')renderInvoicesPage();
+      else if(activeTab.id==='tab-calendar')renderCalendar();
     }
-  }else{setSS(SCRIPT_URL?'connected':'off');toast('⚠ Sync failed — check Sheets URL')}
+  }else{setSS(SCRIPT_URL?'connected':'off');if(!silent)toast('⚠ Sync failed — check Sheets URL')}
 }
 async function pushRow(sheet,obj){if(SCRIPT_URL)await sheetsReq('append',{sheet,row:obj})}
 async function updateRow(sheet,id,obj){if(SCRIPT_URL)await sheetsReq('update',{sheet,id,updates:obj})}
@@ -843,7 +845,8 @@ function importCustomersJSON(input){
       if(Array.isArray(data.customers)&&data.customers.length){
         customers=data.customers;LS.set('customers',customers);
         renderCustomers('');
-        toast(`✓ ${customers.length} customers imported`);
+        toast(`✓ ${customers.length} customers imported — pushing to Sheets...`);
+        if(SCRIPT_URL)pushCustomersToSheets();
       } else {
         toast('⚠ Invalid format — expected {"customers":[...]}');
       }
@@ -865,7 +868,8 @@ function dzDrop(e){
       if(Array.isArray(data.customers)&&data.customers.length){
         customers=data.customers;LS.set('customers',customers);
         renderCustomers('');
-        toast(`✓ ${customers.length} customers imported`);
+        toast(`✓ ${customers.length} customers imported — pushing to Sheets...`);
+        if(SCRIPT_URL)pushCustomersToSheets();
       } else {
         toast('⚠ Invalid format — expected {"customers":[...]}');
       }
@@ -1704,8 +1708,9 @@ function dlCalendar(){
 }
 
 seed();initCal();setDateHeader();
-if(SCRIPT_URL)setSS('connected');
+if(SCRIPT_URL){setSS('connected');syncFromSheets(true);}
 renderDash();
+setInterval(()=>{if(SCRIPT_URL)syncFromSheets(true);},90000);
 </script>
 </body>
 </html>
