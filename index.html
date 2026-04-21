@@ -685,7 +685,7 @@ async function syncFromSheets(silent=false){
   if(!SCRIPT_URL){if(!silent)toast('⚠ Set up Sheets URL first');return}
   if(!silent)setSS('syncing');
   const res=await sheetsReq('getAll');
-  const nd=v=>{if(!v)return v;const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);return isNaN(d)?s:d.toISOString().slice(0,10);};
+  const nd=v=>{if(!v)return v;const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);if(isNaN(d))return s;return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   if(res&&res.ok){
     if(res.customers?.length){customers=res.customers;LS.set('customers',customers)}
     if(res.products?.length){products=res.products;LS.set('products',products)}
