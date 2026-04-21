@@ -477,15 +477,9 @@ tr:hover td{background:var(--bg)}
     <div id="stock-lines"></div>
   </div>
   <div id="proxy-fields">
-    <div class="order-lines-hd"><span style="flex:1">상품명·내용</span><span style="width:82px;text-align:right">원가</span><span style="width:82px;text-align:right">청구액</span><span style="width:57px"></span></div>
+    <div class="order-lines-hd"><span style="flex:1">상품명·내용</span><span style="width:82px;text-align:right">원가</span><span style="width:82px;text-align:right">청구액</span><span style="width:100px">플랫폼</span><span style="width:57px"></span></div>
     <div id="proxy-lines"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Platform</span></label>
-        <select id="o-platform"><option value="">선택...</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="domeggook">Domeggook</option><option value="other">기타</option></select>
-      </div>
-      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Order #</span></label><input type="text" id="o-receipt" placeholder="주문번호"></div>
-    </div>
-    <div style="display:flex;gap:8px">
       <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">배송비 (₩)</span></label><input type="number" id="o-ship" placeholder="0"></div>
       <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Status</span></label>
         <select id="o-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select>
@@ -494,7 +488,7 @@ tr:hover td{background:var(--bg)}
   </div>
   <hr class="divider">
   <div class="field"><label><span class="lk">Payment / 결제</span></label>
-    <select id="o-payment"><option value="credit">외상 (월말 정산)</option><option value="cash">현금</option><option value="transfer">계좌이체</option></select>
+    <select id="o-payment"><option value="credit">On Credit (Month-end)</option><option value="cash">Cash</option><option value="transfer">Bank Transfer</option></select>
   </div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="배송지, 특이사항..."></div>
   <div class="mact">
@@ -897,11 +891,14 @@ function renderStockLine(line={}){
     <button class="ol-del-btn" onclick="removeOrderLine(this)">×</button>
   </div>`;
 }
+const PLATFORM_OPTS=`<option value="">플랫폼</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="domeggook">Domeggook</option><option value="other">기타</option>`;
 function renderProxyLine(line={}){
+  const platSel=PLATFORM_OPTS.replace(`value="${line.platform||''}"`,`value="${line.platform||''}" selected`);
   return `<div class="order-line">
     <input type="text" class="ol-desc" placeholder="상품명·내용" value="${line.desc||''}">
     <input type="number" class="ol-cost" placeholder="원가" value="${line.cost||''}" style="width:82px;text-align:right">
     <input type="number" class="ol-charge" placeholder="청구액" value="${line.charge||''}" style="width:82px;text-align:right">
+    <select class="ol-platform" style="width:100px;height:32px;padding:0 6px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;background:#fff;outline:none">${PLATFORM_OPTS}</select>
     <button class="ol-add-btn" onclick="addProxyLine()">+</button>
     <button class="ol-del-btn" onclick="removeOrderLine(this)">×</button>
   </div>`;
@@ -937,13 +934,14 @@ async function saveOrder(){
     }
   }else{
     const lines=[...document.querySelectorAll('#proxy-lines .order-line')];
-    const items=lines.map(l=>({desc:l.querySelector('.ol-desc').value.trim(),cost:Number(l.querySelector('.ol-cost').value)||0,charge:Number(l.querySelector('.ol-charge').value)||0})).filter(i=>i.desc||i.charge);
+    const items=lines.map(l=>({desc:l.querySelector('.ol-desc').value.trim(),cost:Number(l.querySelector('.ol-cost').value)||0,charge:Number(l.querySelector('.ol-charge').value)||0,platform:l.querySelector('.ol-platform').value})).filter(i=>i.desc||i.charge);
     if(!items.length){alert('상품 내용을 입력해주세요.');return}
     const desc=items.map(i=>i.desc).filter(Boolean).join(', ');
+    const platList=[...new Set(items.map(i=>i.platform).filter(Boolean))].join(', ');
     o={...o,productId:'',qty:items.length,
        desc,url:'',
-       platform:document.getElementById('o-platform').value,
-       receiptNo:document.getElementById('o-receipt').value,
+       platform:platList,
+       receiptNo:'',
        cost:items.reduce((s,i)=>s+i.cost,0),
        shippingCost:Number(document.getElementById('o-ship').value),
        charge:items.reduce((s,i)=>s+i.charge,0),
