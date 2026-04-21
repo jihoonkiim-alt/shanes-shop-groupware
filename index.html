@@ -1760,10 +1760,10 @@ function setDateHeader(){
   const n=new Date();
   const opt={timeZone:'Asia/Seoul'};
   document.getElementById('date-en').textContent=n.toLocaleDateString('en-US',{...opt,weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  document.getElementById('date-time').textContent=n.toLocaleTimeString('en-US',{...opt,hour:'numeric',minute:'2-digit',hour12:true})+' KST';
+  document.getElementById('date-time').textContent=n.toLocaleTimeString('en-US',{...opt,hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true})+' KST';
   document.getElementById('date-ko').textContent=n.toLocaleDateString('ko-KR',{...opt,year:'numeric',month:'long',day:'numeric',weekday:'short'});
 }
-setInterval(setDateHeader,30000);
+setInterval(setDateHeader,1000);
 
 /* ── XLSX DOWNLOAD ─────────────────────────────────────────────────────── */
 function xlsxDownload(sheets, filename){
