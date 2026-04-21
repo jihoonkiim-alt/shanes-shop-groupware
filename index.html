@@ -177,7 +177,7 @@ tr:hover td{background:var(--bg)}
 .cdn{text-align:center}.cdn .dk{font-size:10px;font-weight:600;color:var(--text2);display:block}.cdn .de{font-size:8px;color:var(--text3);display:block}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-day{min-height:66px;border-radius:6px;padding:5px;cursor:pointer;border:1px solid transparent;overflow:hidden}
-.cal-day:hover{background:var(--bg)}.cal-day.today{border-color:var(--accent);background:var(--al)}
+.cal-day:hover{background:var(--bg)}.cal-day.today{border-color:var(--accent);background:var(--al)}.cal-day.cal-day-sel{border-color:var(--accent);background:var(--al);box-shadow:0 0 0 2px var(--accent)}
 .cal-day.other-mo .cal-day-num{color:var(--text3)}
 .cal-day-num{font-size:11px;font-weight:600;margin-bottom:2px;display:block}
 .cal-ev{font-size:8px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
@@ -424,10 +424,11 @@ tr:hover td{background:var(--bg)}
         <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div><span>Note</span></div>
       </div>
     </div>
-    <div class="cal-grid"><div class="cal-dh" id="cal-dh"></div><div class="cal-days" id="cal-days"></div></div>
+    <div class="cal-grid"><div class="cal-dh" id="cal-dh"></div><div class="cal-days" id="cal-days"></div><div id="cal-day-detail" style="display:none;margin-top:10px;background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--border)"></div></div>
   </div>
   <div class="below-cal">
     <div class="card"><div class="ch"><div><div class="ce">This Month</div><div class="ck">이달 일정</div></div></div><div id="event-list"></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Important Deadlines</div><div class="ck">주요 행정 일정</div></div></div><div id="admin-deadline-list"></div></div>
     <div class="card"><div class="ch"><div><div class="ce">Billing Queue</div><div class="ck">월말 청구 예정</div></div></div><div id="billing-queue"></div></div>
   </div>
 </div>
@@ -556,7 +557,7 @@ tr:hover td{background:var(--bg)}
 <div class="modal-overlay" id="overlay-event" onclick="if(event.target===this)closeModal('modal-event')">
 <div class="modal" id="modal-event">
   <div class="mth"><div class="me">Add Event</div><div class="mk">일정 추가</div></div>
-  <div class="field"><label><span class="lk">Date / 일자</span></label><div style="display:flex;gap:8px;align-items:center"><input type="date" id="ev-date" style="flex:1"><label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text3);cursor:pointer;white-space:nowrap"><input type="checkbox" id="ev-time-toggle" onchange="document.getElementById('ev-time').style.display=this.checked?'inline-block':'none'"> 시간</label><input type="time" id="ev-time" style="display:none;width:100px"></div></div>
+  <div class="field"><label><span class="lk">Date / 일자</span></label><div><div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="date" id="ev-date" style="flex:1" oninput="const ed=document.getElementById('ev-date-end');if(!ed.value||ed.value<this.value)ed.value=this.value"><span style="font-size:11px;color:var(--text3);white-space:nowrap">~</span><input type="date" id="ev-date-end" style="flex:1"></div><div style="display:flex;gap:8px;align-items:center"><label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text3);cursor:pointer;white-space:nowrap"><input type="checkbox" id="ev-time-toggle" onchange="document.getElementById('ev-time').style.display=this.checked?'inline-block':'none'"> 시간</label><input type="time" id="ev-time" style="display:none;width:100px"></div></div></div>
   <div class="field"><label><span class="lk">Title (English)</span></label><input type="text" id="ev-en" placeholder="e.g. Month-end billing"></div>
   <div class="field"><label><span class="lk">제목 (한국어)</span></label><input type="text" id="ev-ko" placeholder="예: 월말 청구 마감"></div>
   <div class="field"><label><span class="lk">Category / 구분</span></label><select id="ev-type"><option value="billing">Billing / 청구</option><option value="order">Order·Delivery / 주문·배송</option><option value="note">Note / 메모</option><option value="personal">Personal / 개인</option></select></div>
@@ -768,7 +769,7 @@ function openModal(id){
     setOrderType('stock');
   }
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
-  if(id==='modal-event'){document.getElementById('ev-date').value=nowDate();document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';}
+  if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
   if(id==='modal-setup')document.getElementById('script-url-input').value=SCRIPT_URL;
   const ov=document.getElementById('overlay-'+key);
@@ -1027,9 +1028,10 @@ async function saveEvent(){
   if(!date||!en){alert('Date and title required.');return}
   const timeToggle=document.getElementById('ev-time-toggle');
   const evTime=timeToggle.checked?document.getElementById('ev-time').value:'';
-  const ev={id:newId(events),date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime};
+  const dateEnd=document.getElementById('ev-date-end').value||date;
+  const ev={id:newId(events),date,dateEnd:dateEnd>=date?dateEnd:date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time});
+  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.dateEnd,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time});
   closeModal('modal-event');toast('✓ Event added');renderCalendar();
 }
 
@@ -1394,10 +1396,28 @@ function getHoliday(ds){
   return KR_FIXED[mmdd]||null;
 }
 /* ── Korean Self-Employed Admin Deadlines ─────────────────────────────── */
-/* hi=간이과세자 해당, lo=일반/면세과세자 해당 */
-const KR_ADMIN_HI={'01-25':'부가세 신고 (간이)','05-31':'종합소득세 신고'};
-const KR_ADMIN_LO={'02-10':'사업장현황신고','04-25':'부가세 1기 예정','07-25':'부가세 1기 확정','10-25':'부가세 2기 예정'};
-function getAdminDeadline(ds){const m=ds.slice(5);if(KR_ADMIN_HI[m])return{label:KR_ADMIN_HI[m],hi:true};if(KR_ADMIN_LO[m])return{label:KR_ADMIN_LO[m],hi:false};return null;}
+/* hi=간이과세자 해당, lo=일반/면세과세자 */
+const KR_ADMIN_HI=[
+  {start:'01-01',end:'01-25',labelEn:'VAT Filing (Simplified)',labelKo:'부가세 신고 (간이)'},
+  {start:'05-01',end:'05-31',labelEn:'Income Tax Filing',labelKo:'종합소득세 신고'}
+];
+const KR_ADMIN_LO=[
+  {start:'02-01',end:'02-10',labelEn:'Business Status Report',labelKo:'사업장현황신고'},
+  {start:'04-01',end:'04-25',labelEn:'VAT Q1 Preliminary',labelKo:'부가세 1기 예정'},
+  {start:'07-01',end:'07-25',labelEn:'VAT H1 Final',labelKo:'부가세 1기 확정'},
+  {start:'10-01',end:'10-25',labelEn:'VAT Q3 Preliminary',labelKo:'부가세 2기 예정'}
+];
+function getAdminDeadlines(ds){
+  const mmdd=ds.slice(5);
+  const result=[];
+  [...KR_ADMIN_HI.map(a=>({...a,hi:true})),...KR_ADMIN_LO.map(a=>({...a,hi:false}))].forEach(a=>{
+    if(mmdd>=a.start&&mmdd<=a.end)result.push({...a,isStart:mmdd===a.start,isEnd:mmdd===a.end});
+  });
+  return result;
+}
+
+let selectedCalDay=null;
+function selectCalDay(ds){selectedCalDay=selectedCalDay===ds?null:ds;renderCalendar();}
 
 function renderCalendar(){
   const DK=['일','월','화','수','목','금','토'],DE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1408,31 +1428,65 @@ function renderCalendar(){
   document.getElementById('cal-dh').innerHTML=DK.map((d,i)=>`<div class="cdn"><span class="dk" style="${i===0?'color:#c0392b':''}">${d}</span><span class="de" style="${i===0?'color:#c0392b':''}">${DE[i]}</span></div>`).join('');
   const first=new Date(calYear,calMonth,1).getDay(),last=new Date(calYear,calMonth+1,0).getDate(),today=new Date();
   const ym=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
-  const mevs=events.filter(e=>e.date&&e.date.startsWith(ym)),mords=orders.filter(o=>o.date&&o.date.startsWith(ym));
+  const ymFirst=ym+'-01',ymLast=ym+'-31';
+  const mevs=events.filter(e=>{if(!e.date)return false;const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return e.date<=ymLast&&end>=ymFirst;});
+  const mords=orders.filter(o=>o.date&&o.date.startsWith(ym));
   let html='';
   for(let i=0;i<first;i++){const d=new Date(calYear,calMonth,0-first+i+1).getDate();html+=`<div class="cal-day other-mo"><span class="cal-day-num">${d}</span></div>`}
   for(let d=1;d<=last;d++){
     const ds=`${ym}-${String(d).padStart(2,'0')}`;
     const dow=new Date(calYear,calMonth,d).getDay();
     const isT=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    const isSel=selectedCalDay===ds;
     const holiday=getHoliday(ds);
     const isSun=dow===0;
-    const devs=mevs.filter(e=>e.date===ds);
+    const admins=getAdminDeadlines(ds);
+    const devs=mevs.filter(e=>{const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return ds>=e.date&&ds<=end;});
     const dords=mords.filter(o=>o.date===ds);
-    const admin=getAdminDeadline(ds);
     let evH='';
     if(holiday)evH+=`<div class="cal-ev ev-holiday">${holiday}</div>`;
-    if(admin)evH+=`<div class="cal-ev ev-admin${admin.hi?'':'-dim'}">${admin.label}</div>`;
-    evH+=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.time?e.time+' ':''}${e.en||e.ko}</div>`).join('');
+    admins.forEach(a=>{
+      if(a.isEnd)evH+=`<div class="cal-ev ev-admin${a.hi?'':'-dim'}">${a.labelKo} 마감</div>`;
+      else if(a.isStart)evH+=`<div class="cal-ev ev-admin${a.hi?'':'-dim'}" style="opacity:.65">${a.labelKo} 시작</div>`;
+    });
+    evH+=devs.map(e=>{
+      const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;
+      const isStart=ds===e.date,isEnd=ds===end,isMid=!isStart&&!isEnd;
+      return `<div class="cal-ev ev-${e.type}"${isMid?' style="opacity:.4"':''}>${e.time&&isStart?e.time+' ':''}${e.en||e.ko}</div>`;
+    }).join('');
     if(dords.length)evH+=`<div class="cal-ev ev-order">${dords.length} order${dords.length>1?'s':''}</div>`;
-    const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':''].filter(Boolean).join(' ');
-    html+=`<div class="${cls}"><span class="cal-day-num">${d}</span>${evH}</div>`;
+    const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':'',isSel?'cal-day-sel':''].filter(Boolean).join(' ');
+    html+=`<div class="${cls}" onclick="selectCalDay('${ds}')"><span class="cal-day-num">${d}</span>${evH}</div>`;
   }
   document.getElementById('cal-days').innerHTML=html;
+  /* day detail panel */
+  const det=document.getElementById('cal-day-detail');
+  if(selectedCalDay&&selectedCalDay.startsWith(ym)){
+    const sd=selectedCalDay;
+    const sdH=getHoliday(sd),sdA=getAdminDeadlines(sd);
+    const sdEvs=mevs.filter(e=>{const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return sd>=e.date&&sd<=end;});
+    const sdOrds=orders.filter(o=>o.date===sd);
+    let dH=`<div style="font-weight:700;font-size:13px;margin-bottom:8px">${sd} 일정 / Schedule</div>`;
+    if(sdH)dH+=`<div class="ev-item"><div class="ev-dot" style="background:#c0392b"></div><div><div class="ev-ik">${sdH}</div><div class="ev-ie">공휴일 · Public Holiday</div></div></div>`;
+    sdA.forEach(a=>dH+=`<div class="ev-item"><div class="ev-dot" style="background:${a.hi?'#ff6d00':'#a0632a'}"></div><div><div class="ev-ik">${a.labelEn}</div><div class="ev-ie">${a.labelKo}${a.isStart?' — 시작':a.isEnd?' — 마감':''}</div></div></div>`);
+    const dc2={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
+    sdEvs.forEach(e=>dH+=`<div class="ev-item"><div class="ev-dot" style="background:${dc2[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`);
+    if(sdOrds.length)dH+=`<div class="ev-item"><div class="ev-dot" style="background:var(--purple)"></div><div><div class="ev-ik">${sdOrds.length} order${sdOrds.length>1?'s':''}</div><div class="ev-ie">${sdOrds.map(o=>{const c=customers.find(x=>x.id==o.customerId);return c?c.name:'?'}).join(', ')}</div></div></div>`;
+    if(!sdH&&!sdA.length&&!sdEvs.length&&!sdOrds.length)dH+='<div class="empty">No events / 일정 없음</div>';
+    det.innerHTML=dH;det.style.display='block';
+  } else {det.style.display='none';}
+  /* event list */
   const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
-  document.getElementById('event-list').innerHTML=mevs.length?[...mevs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>
-    `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${e.date}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`
-  ).join(''):'<div class="empty">No events this month</div>';
+  const userEvs=mevs.filter(e=>e.date.startsWith(ym)||(e.dateEnd&&e.dateEnd.startsWith(ym)));
+  document.getElementById('event-list').innerHTML=userEvs.length?[...userEvs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{
+    const dateRange=e.dateEnd&&e.dateEnd!==e.date?e.date+' ~ '+e.dateEnd:e.date;
+    return `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${dateRange}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`;
+  }).join(''):'<div class="empty">No events this month</div>';
+  /* important admin deadlines this month */
+  const mStr=String(calMonth+1).padStart(2,'0');
+  const adminThis=[...KR_ADMIN_HI.map(a=>({...a,hi:true})),...KR_ADMIN_LO.map(a=>({...a,hi:false}))].filter(a=>a.start.slice(0,2)===mStr||a.end.slice(0,2)===mStr);
+  document.getElementById('admin-deadline-list').innerHTML=adminThis.length?adminThis.map(a=>`<div class="ev-item"><div class="ev-dot" style="background:${a.hi?'#ff6d00':'#a0632a'}"></div><div><div class="ev-ik" style="${a.hi?'font-weight:700':''}">${a.labelEn}${a.hi?' ★':''}</div><div class="ev-ie">${a.labelKo}</div><div class="ev-id">${ym.slice(0,4)}-${a.start} ~ ${ym.slice(0,4)}-${a.end}</div></div></div>`).join(''):'<div class="empty">No deadlines this month</div>';
+  /* billing queue */
   const bqItems=customers.map(c=>{
     const amt=mords.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
     return{c,amt};
