@@ -337,7 +337,13 @@ tr:hover td{background:var(--bg)}
 
 <!-- SALES & BILLING -->
 <div class="sec" id="tab-sales">
-  <div class="ph"><div><div class="pte">Sales & Billing Management</div><div class="ptk">매출 · 청구 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-order')">+ New Order</button><button class="btn" onclick="dlSales()">⬇ .xlsx</button></div></div>
+  <div class="ph"><div><div class="pte">Sales & Billing Management</div><div class="ptk">매출 · 청구 관리</div></div><div class="btn-row"><button class="btn btn-p" onclick="openModal('modal-order')">+ New Order</button><button class="btn" onclick="dlOrderTemplate()">⬇ Template</button><button class="btn" onclick="dlSales()">⬇ .xlsx</button></div></div>
+  <label class="dropzone" id="order-import-dz" ondragover="dzOverOrd(event)" ondragleave="dzLeaveOrd(event)" ondrop="dzDropOrd(event)" onclick="document.getElementById('order-import-file').click()">
+    <input type="file" id="order-import-file" accept=".xlsx,.xls" onchange="importOrdersXLSX(this)">
+    <div class="dz-icon">📊</div>
+    <div class="dz-t">Import Proxy Orders (.xlsx)</div>
+    <div class="dz-s">헤더: Date · Customer · Item · Cost · Charge · Payment · Platform · Shipping · Note &nbsp;·&nbsp; Charge 비워두면 나중에 수정 가능</div>
+  </label>
   <div class="stats" id="sales-stats"></div>
   <div class="card"><div class="ch">
     <div><div class="ce">Order List</div><div class="ck">주문 목록</div></div>
@@ -514,6 +520,32 @@ tr:hover td{background:var(--bg)}
     <button class="btn" onclick="closeModal('modal-order')">Cancel</button>
     <button class="btn btn-p" style="padding:10px 28px;font-size:13px" onclick="saveOrder()">Save Order</button>
   </div>
+</div>
+</div>
+
+<!-- MODAL: Edit Order -->
+<div class="modal-overlay" id="overlay-edit-order" onclick="if(event.target===this)closeModal('modal-edit-order')">
+<div class="modal modal-lg" id="modal-edit-order">
+  <div class="mth"><div class="me">Edit Order</div><div class="mk">주문 수정</div></div>
+  <div style="display:flex;gap:10px;margin-bottom:10px">
+    <div class="field" style="flex:1;margin:0"><label><span class="lk">Date</span></label><input type="date" id="eo-date"></div>
+    <div class="field" style="flex:2;margin:0"><label><span class="lk">Customer</span></label><input type="text" id="eo-customer-name" readonly style="background:var(--bg);color:var(--text3)"></div>
+  </div>
+  <div class="field"><label><span class="lk">Item / Description</span></label><input type="text" id="eo-desc"></div>
+  <div id="eo-proxy-fields">
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label><span class="lk">Cost 원가 (₩)</span></label><input type="number" id="eo-cost" placeholder="0"></div>
+      <div class="field" style="flex:1"><label><span class="lk">Shipping 배송비 (₩)</span></label><input type="number" id="eo-ship" placeholder="0"></div>
+    </div>
+  </div>
+  <div class="field"><label><span class="lk">Charge 청구액 (₩)</span></label><input type="number" id="eo-charge" placeholder="0"></div>
+  <div style="display:flex;gap:10px">
+    <div class="field" style="flex:1"><label><span class="lk">Payment</span></label><select id="eo-payment"><option value="credit">On Credit</option><option value="cash">Cash</option><option value="transfer">Bank Transfer</option></select></div>
+    <div class="field" style="flex:1" id="eo-platform-wrap"><label><span class="lk">Platform</span></label><select id="eo-platform"><option value="">—</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="ably">Ably</option><option value="domeggook">Domeggook</option><option value="other">Other</option></select></div>
+    <div class="field" style="flex:1" id="eo-status-wrap"><label><span class="lk">Proxy Status</span></label><select id="eo-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select></div>
+  </div>
+  <div class="field"><label><span class="lk">Note</span></label><input type="text" id="eo-note"></div>
+  <div class="mact"><button class="btn" onclick="closeModal('modal-edit-order')">Cancel</button><button class="btn btn-p" onclick="saveEditOrder()">Update</button></div>
 </div>
 </div>
 
@@ -1111,6 +1143,109 @@ async function settleCredit(cid){
   await pushRow('Events',{id:ev.id,date:ev.date,ko:ev.ko,en:ev.en,type:ev.type});
   toast('✓ Settlement recorded');renderCustomers('');
 }
+/* ── ORDER IMPORT (XLSX) ────────────────────────────────────────────────── */
+function importOrdersXLSX(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){toast('⚠ No data found');input.value='';return;}
+      function mf(row,keys){const rl={};Object.keys(row).forEach(k=>rl[k.toLowerCase().trim()]=row[k]);for(const k of keys){const v=rl[k.toLowerCase()];if(v!==undefined&&String(v).trim()!='')return String(v).trim();}return '';}
+      let added=0,skipped=0,skipNames=[];
+      rows.forEach(row=>{
+        const cname=mf(row,['customer','고객명','name','이름','고객']);
+        if(!cname){skipped++;return;}
+        const c=customers.find(x=>x.name.trim().toUpperCase()===cname.toUpperCase());
+        if(!c){skipped++;skipNames.push(cname);return;}
+        const dateRaw=mf(row,['date','날짜','일자']);
+        let date=nowDate();
+        if(dateRaw){try{const d=new Date(dateRaw);if(!isNaN(d))date=d.toISOString().slice(0,10);}catch{}}
+        const desc=mf(row,['item','description','상품','내용','품목','물품','desc']);
+        const cost=Number(mf(row,['cost','원가','비용']))||0;
+        const ship=Number(mf(row,['shipping','배송비','ship']))||0;
+        const charge=Number(mf(row,['charge','청구액','청구금액','price']))||0;
+        const payment=mf(row,['payment','결제방식','결제'])||'credit';
+        const platRaw=mf(row,['platform','구매처','플랫폼']).toLowerCase();
+        const platMap={'쿠팡':'coupang','coupang':'coupang','naver':'naver','네이버':'naver','ns몰':'nsmall','nsmall':'nsmall','ns mall':'nsmall','에이블리':'ably','ably':'ably','도매꾹':'domeggook','domeggook':'domeggook'};
+        const platform=platMap[platRaw]||platRaw||'';
+        const note=mf(row,['note','메모','notes']);
+        const o={id:newId(orders),date,customerId:c.id,type:'proxy',productId:'',qty:1,
+          desc:desc||'(미입력)',cost,shippingCost:ship,charge,platform,receiptNo:'',
+          payment,proxyStatus:'pending',url:'',note};
+        if(payment==='credit'&&c){c.outstanding=(Number(c.outstanding)||0)+charge;LS.set('customers',customers);}
+        orders.push(o);added++;
+      });
+      LS.set('orders',orders);
+      if(skipped>0)toast(`✓ ${added} imported · ${skipped} skipped (미등록 고객: ${skipNames.slice(0,3).join(', ')}${skipNames.length>3?'…':''})`);
+      else toast(`✓ ${added} orders imported`);
+      renderOrders();renderDash();
+      if(SCRIPT_URL){orders.slice(-added).forEach(o=>pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:'',qty:o.qty,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,platform:o.platform,receiptNo:'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:''}));}
+    }catch(err){toast('⚠ Failed: '+err.message)}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function dzOverOrd(e){e.preventDefault();document.getElementById('order-import-dz').classList.add('drag-over')}
+function dzLeaveOrd(e){document.getElementById('order-import-dz').classList.remove('drag-over')}
+function dzDropOrd(e){e.preventDefault();document.getElementById('order-import-dz').classList.remove('drag-over');const file=e.dataTransfer.files[0];if(!file)return;importOrdersXLSX({files:[file],value:''});}
+function dlOrderTemplate(){
+  const ws=XLSX.utils.aoa_to_sheet([['Date','Customer','Item','Cost','Charge','Payment','Platform','Shipping','Note'],
+    [nowDate(),'고객이름 (등록된 이름 그대로)','상품명','원가','청구금액','credit','coupang','0','메모']]);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Orders');
+  XLSX.writeFile(wb,'order_template.xlsx');
+}
+
+/* ── ORDER EDIT ─────────────────────────────────────────────────────────── */
+function openEditOrder(id){
+  const o=orders.find(x=>x.id==id);if(!o)return;
+  const c=getC(o.customerId);
+  document.getElementById('eo-date').value=o.date||'';
+  document.getElementById('eo-customer-name').value=c?c.name:'?';
+  document.getElementById('eo-desc').value=o.desc||'';
+  document.getElementById('eo-cost').value=o.cost||0;
+  document.getElementById('eo-ship').value=o.shippingCost||0;
+  document.getElementById('eo-charge').value=o.charge||0;
+  document.getElementById('eo-payment').value=o.payment||'credit';
+  document.getElementById('eo-platform').value=o.platform||'';
+  document.getElementById('eo-proxy-status').value=o.proxyStatus||'pending';
+  document.getElementById('eo-note').value=o.note||'';
+  const isProxy=o.type==='proxy';
+  document.getElementById('eo-proxy-fields').style.display=isProxy?'block':'none';
+  document.getElementById('eo-platform-wrap').style.display=isProxy?'block':'none';
+  document.getElementById('eo-status-wrap').style.display=isProxy?'block':'none';
+  document.getElementById('modal-edit-order').dataset.editId=id;
+  document.getElementById('overlay-edit-order').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
+async function saveEditOrder(){
+  const id=Number(document.getElementById('modal-edit-order').dataset.editId);
+  const o=orders.find(x=>x.id==id);if(!o)return;
+  const oldCharge=Number(o.charge)||0,oldPayment=o.payment;
+  const newCharge=Number(document.getElementById('eo-charge').value)||0;
+  const newPayment=document.getElementById('eo-payment').value;
+  o.date=document.getElementById('eo-date').value;
+  o.desc=document.getElementById('eo-desc').value;
+  o.cost=Number(document.getElementById('eo-cost').value)||0;
+  o.shippingCost=Number(document.getElementById('eo-ship').value)||0;
+  o.charge=newCharge;o.payment=newPayment;
+  o.platform=document.getElementById('eo-platform').value;
+  o.proxyStatus=document.getElementById('eo-proxy-status').value;
+  o.note=document.getElementById('eo-note').value;
+  /* adjust outstanding */
+  const c=getC(o.customerId);
+  if(c){
+    let adj=0;
+    if(oldPayment==='credit')adj-=oldCharge;
+    if(newPayment==='credit')adj+=newCharge;
+    if(adj!==0){c.outstanding=(Number(c.outstanding)||0)+adj;LS.set('customers',customers);await updateRow('Customers',c.id,{outstanding:c.outstanding});}
+  }
+  LS.set('orders',orders);
+  await updateRow('Orders',id,{date:o.date,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
+  closeModal('modal-edit-order');toast('✓ Order updated');renderOrders();renderDash();
+}
 async function deleteOrder(id){if(!confirm('Delete this order?'))return;orders=orders.filter(o=>o.id!=id);LS.set('orders',orders);await deleteRow('Orders',id);toast('Deleted');renderOrders()}
 async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);await deleteRow('Products',id);toast('Deleted');renderInventory()}
 async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);await deleteRow('Customers',id);toast('Deleted');renderCustomers('')}
@@ -1194,7 +1329,7 @@ function renderOrders(){
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
-    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td>${o.type==='proxy'?`<span class="mono">${won(totalCost)}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${o.type==='proxy'?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`:''}<button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
+    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td>${o.type==='proxy'?`<span class="mono">${won(totalCost)}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${o.type==='proxy'?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`:''}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="10" class="empty">No orders for this period</td></tr>';
 }
 
