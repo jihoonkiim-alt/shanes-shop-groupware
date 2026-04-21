@@ -181,7 +181,7 @@ tr:hover td{background:var(--bg)}
 .cal-day.other-mo .cal-day-num{color:var(--text3)}
 .cal-day-num{font-size:11px;font-weight:600;margin-bottom:2px;display:block}
 .cal-ev{font-size:8px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}.ev-holiday{background:#fde8e8;color:#c0392b;font-weight:600}
+.ev-billing{background:var(--aml);color:var(--amber)}.ev-order{background:var(--pl);color:var(--purple)}.ev-note{background:var(--bl);color:var(--blue)}.ev-personal{background:#e8f5e9;color:#2e7d32;font-weight:500}.ev-admin{background:#fff3e0;color:#e65100;font-weight:500}.ev-holiday{background:#fde8e8;color:#c0392b;font-weight:600}
 .cal-day.is-sunday .cal-day-num{color:#c0392b}
 .cal-day.is-holiday .cal-day-num{color:#c0392b}
 .below-cal{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
@@ -556,10 +556,10 @@ tr:hover td{background:var(--bg)}
 <div class="modal-overlay" id="overlay-event" onclick="if(event.target===this)closeModal('modal-event')">
 <div class="modal" id="modal-event">
   <div class="mth"><div class="me">Add Event</div><div class="mk">일정 추가</div></div>
-  <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="ev-date"></div>
+  <div class="field"><label><span class="lk">Date / 일자</span></label><div style="display:flex;gap:8px;align-items:center"><input type="date" id="ev-date" style="flex:1"><label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text3);cursor:pointer;white-space:nowrap"><input type="checkbox" id="ev-time-toggle" onchange="document.getElementById('ev-time').style.display=this.checked?'inline-block':'none'"> 시간</label><input type="time" id="ev-time" style="display:none;width:100px"></div></div>
   <div class="field"><label><span class="lk">Title (English)</span></label><input type="text" id="ev-en" placeholder="e.g. Month-end billing"></div>
   <div class="field"><label><span class="lk">제목 (한국어)</span></label><input type="text" id="ev-ko" placeholder="예: 월말 청구 마감"></div>
-  <div class="field"><label><span class="lk">Category / 구분</span></label><select id="ev-type"><option value="billing">Billing / 청구</option><option value="order">Order·Delivery / 주문·배송</option><option value="note">Note / 메모</option></select></div>
+  <div class="field"><label><span class="lk">Category / 구분</span></label><select id="ev-type"><option value="billing">Billing / 청구</option><option value="order">Order·Delivery / 주문·배송</option><option value="note">Note / 메모</option><option value="personal">Personal / 개인</option></select></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-event')">Cancel</button><button class="btn btn-p" onclick="saveEvent()">Save</button></div>
 </div>
 </div>
@@ -768,7 +768,7 @@ function openModal(id){
     setOrderType('stock');
   }
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
-  if(id==='modal-event')document.getElementById('ev-date').value=nowDate();
+  if(id==='modal-event'){document.getElementById('ev-date').value=nowDate();document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
   if(id==='modal-setup')document.getElementById('script-url-input').value=SCRIPT_URL;
   const ov=document.getElementById('overlay-'+key);
@@ -1025,9 +1025,11 @@ async function saveEvent(){
   const date=document.getElementById('ev-date').value;
   const en=document.getElementById('ev-en').value.trim();
   if(!date||!en){alert('Date and title required.');return}
-  const ev={id:newId(events),date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value};
+  const timeToggle=document.getElementById('ev-time-toggle');
+  const evTime=timeToggle.checked?document.getElementById('ev-time').value:'';
+  const ev={id:newId(events),date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,ko:ev.ko,en:ev.en,type:ev.type});
+  await pushRow('Events',{id:ev.id,date:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time});
   closeModal('modal-event');toast('✓ Event added');renderCalendar();
 }
 
@@ -1367,6 +1369,7 @@ function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalenda
 const KR_FIXED={
   '01-01':'New Year\'s',
   '03-01':'Independence Day',
+  '05-01':'근로자의날',
   '05-05':'Children\'s Day',
   '06-06':'Memorial Day',
   '08-15':'Liberation Day',
@@ -1380,7 +1383,7 @@ const KR_LUNAR={
   '2025-10-05':'추석 연휴','2025-10-06':'추석','2025-10-07':'추석 연휴','2025-10-08':'대체공휴일',
   '2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
   '2026-03-02':'대체공휴일',
-  '2026-05-24':'부처님오신날',
+  '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일',
   '2026-08-17':'대체공휴일',
   '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴','2026-09-28':'대체공휴일',
   '2026-10-05':'대체공휴일'
@@ -1390,6 +1393,16 @@ function getHoliday(ds){
   const mmdd=ds.slice(5);
   return KR_FIXED[mmdd]||null;
 }
+/* ── Korean Self-Employed Admin Deadlines ─────────────────────────────── */
+const KR_ADMIN={
+  '01-25':'부가세 2기 확정신고',
+  '02-10':'사업장현황신고',
+  '04-25':'부가세 1기 예정신고',
+  '05-31':'종합소득세 신고',
+  '07-25':'부가세 1기 확정신고',
+  '10-25':'부가세 2기 예정신고'
+};
+function getAdminDeadline(ds){const mmdd=ds.slice(5);return KR_ADMIN[mmdd]||null;}
 
 function renderCalendar(){
   const DK=['일','월','화','수','목','금','토'],DE=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1411,17 +1424,19 @@ function renderCalendar(){
     const isSun=dow===0;
     const devs=mevs.filter(e=>e.date===ds);
     const dords=mords.filter(o=>o.date===ds);
+    const admin=getAdminDeadline(ds);
     let evH='';
     if(holiday)evH+=`<div class="cal-ev ev-holiday">${holiday}</div>`;
-    evH+=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.en||e.ko}</div>`).join('');
+    if(admin)evH+=`<div class="cal-ev ev-admin">${admin}</div>`;
+    evH+=devs.map(e=>`<div class="cal-ev ev-${e.type}">${e.time?e.time+' ':''}${e.en||e.ko}</div>`).join('');
     if(dords.length)evH+=`<div class="cal-ev ev-order">${dords.length} order${dords.length>1?'s':''}</div>`;
     const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':''].filter(Boolean).join(' ');
     html+=`<div class="${cls}"><span class="cal-day-num">${d}</span>${evH}</div>`;
   }
   document.getElementById('cal-days').innerHTML=html;
-  const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)'};
+  const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
   document.getElementById('event-list').innerHTML=mevs.length?[...mevs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>
-    `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko}</div><div class="ev-id">${e.date}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`
+    `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${e.date}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`
   ).join(''):'<div class="empty">No events this month</div>';
   const bqItems=customers.map(c=>{
     const amt=mords.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
