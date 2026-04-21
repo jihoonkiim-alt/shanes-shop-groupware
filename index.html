@@ -127,6 +127,25 @@ tr:hover td{background:var(--bg)}
 .tt .ttd{font-size:10px;color:var(--text2);margin-top:5px}
 .proxy-note{background:var(--pl);border:1px solid var(--pb);border-radius:8px;padding:11px 14px;margin-bottom:16px;font-size:12px;color:var(--purple);line-height:1.6}
 .section-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tt-sm{flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:.15s;text-align:center}
+.tt-sm:hover{border-color:var(--border2)}
+.tt-sm.sel-stock{border-color:var(--green);background:var(--gl);color:var(--green)}
+.tt-sm.sel-proxy{border-color:var(--purple);background:var(--pl);color:var(--purple)}
+.order-lines-hd{display:flex;align-items:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;padding:0 2px}
+.order-line{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.order-line select,.order-line input[type=text]{height:32px;padding:0 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:#fff;color:var(--text);outline:none;min-width:0}
+.order-line select{flex:1}
+.order-line input[type=text]{flex:1}
+.order-line input[type=number]{height:32px;padding:0 7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;text-align:right;background:#fff;outline:none;min-width:0}
+.order-line select:focus,.order-line input:focus{border-color:var(--accent)}
+.ol-qty{width:52px!important}
+.ol-unit{width:82px!important;background:var(--bg)!important;color:var(--text2)!important}
+.ol-total{min-width:64px;font-size:12px;font-weight:600;color:var(--accent);text-align:right;white-space:nowrap;flex-shrink:0}
+.ol-cost,.ol-charge{width:82px!important}
+.ol-add-btn{width:28px;height:32px;border-radius:6px;border:1px dashed var(--border);background:#fff;font-size:16px;cursor:pointer;color:var(--green);font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;font-family:inherit;line-height:1}
+.ol-add-btn:hover{border-color:var(--green);background:var(--gl)}
+.ol-del-btn{width:22px;height:32px;border:none;background:none;font-size:14px;cursor:pointer;color:var(--text3);flex-shrink:0;padding:0;font-family:inherit}
+.ol-del-btn:hover{color:var(--red)}
 .setup-box{background:var(--al);border:1px solid var(--ab);border-radius:10px;padding:16px;margin-bottom:16px}
 .setup-box .sb-t{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:6px}
 .setup-box .sb-d{font-size:11px;color:var(--text2);line-height:1.7}
@@ -442,9 +461,9 @@ tr:hover td{background:var(--bg)}
 <div class="modal-overlay" id="overlay-order" onclick="if(event.target===this)closeModal('modal-order')">
 <div class="modal modal-lg" id="modal-order">
   <div class="mth"><div class="me">New Order</div><div class="mk">재고 판매 또는 구매대행 주문 등록</div></div>
-  <div class="type-toggle">
-    <button class="tt" id="tt-stock" onclick="setOrderType('stock')"><div class="ttk">📦 Stock Sale</div><div class="tte">재고 판매</div><div class="ttd">Deducts from inventory automatically</div></button>
-    <button class="tt" id="tt-proxy" onclick="setOrderType('proxy')"><div class="ttk">🛒 Proxy Purchase</div><div class="tte">구매대행</div><div class="ttd">Buy on behalf — no stock deduction</div></button>
+  <div style="display:flex;gap:6px;margin-bottom:14px">
+    <button class="tt-sm" id="tt-stock" onclick="setOrderType('stock')">📦 재고판매</button>
+    <button class="tt-sm" id="tt-proxy" onclick="setOrderType('proxy')">🛒 구매대행</button>
   </div>
   <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="o-date"></div>
   <div class="field" style="position:relative">
@@ -454,39 +473,30 @@ tr:hover td{background:var(--bg)}
     <div id="o-customer-ac" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:9999;max-height:220px;overflow-y:auto;margin-top:4px"></div>
   </div>
   <div id="stock-fields">
-    <div class="section-lbl">Product Info / 상품 정보</div>
-    <div class="field"><label><span class="lk">Select Product / 상품 선택</span></label><select id="o-product" onchange="fillStockPrice()"><option value="">Select...</option></select></div>
-    <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="o-qty" min="1" value="1" oninput="calcStockTotal()"></div>
-    <div class="field"><label><span class="lk">Unit Price / 단가 (₩)</span></label><input type="number" id="o-unit" oninput="calcStockTotal()"></div>
-    <div class="field"><label><span class="lk">Total / 합계 (₩)</span></label><input type="number" id="o-total" readonly style="background:var(--bg);color:var(--accent);font-weight:600"></div>
+    <div class="order-lines-hd"><span style="flex:1">상품</span><span style="width:52px;text-align:center">수량</span><span style="width:82px;text-align:right">단가</span><span style="width:64px;text-align:right">합계</span><span style="width:57px"></span></div>
+    <div id="stock-lines"></div>
   </div>
   <div id="proxy-fields">
-    <div class="proxy-note">Proxy Purchase Mode — no stock deduction. Enter cost and charge amount below.</div>
-    <div class="field"><label><span class="lk">Item Description / 상품명·내용</span></label><input type="text" id="o-pdesc" placeholder="e.g. Coupang — BBW Body Lotion 500ml × 3"></div>
-    <div class="field"><label><span class="lk">Product URL (optional)</span></label><input type="text" id="o-url" placeholder="https://..."></div>
-    <div class="field"><label><span class="lk">Platform / 구매처</span></label>
-      <select id="o-platform">
-        <option value="">Select platform...</option>
-        <option value="coupang">Coupang / 쿠팡</option>
-        <option value="naver">Naver Smart Store / 네이버</option>
-        <option value="nsmall">NS Mall</option>
-        <option value="domeggook">Domeggook / 도매꾹</option>
-        <option value="other">Other / 기타</option>
-      </select>
+    <div class="order-lines-hd"><span style="flex:1">상품명·내용</span><span style="width:82px;text-align:right">원가</span><span style="width:82px;text-align:right">청구액</span><span style="width:57px"></span></div>
+    <div id="proxy-lines"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Platform</span></label>
+        <select id="o-platform"><option value="">선택...</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="domeggook">Domeggook</option><option value="other">기타</option></select>
+      </div>
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Order #</span></label><input type="text" id="o-receipt" placeholder="주문번호"></div>
     </div>
-    <div class="field"><label><span class="lk">Order # / 주문번호</span><span class="le">Platform order confirmation number</span></label><input type="text" id="o-receipt" placeholder="e.g. 쿠팡 주문번호"></div>
-    <div class="field"><label><span class="lk">My Cost / 원가 (₩)</span><span class="le">What I paid to the platform</span></label><input type="number" id="o-cost" placeholder="0"></div>
-    <div class="field"><label><span class="lk">Shipping / 배송비 (₩)</span><span class="le">Shipping & handling cost</span></label><input type="number" id="o-ship" placeholder="0"></div>
-    <div class="field"><label><span class="lk">Charge / 청구액 (₩)</span><span class="le">What customer pays me</span></label><input type="number" id="o-charge" placeholder="0"></div>
-    <div class="field"><label><span class="lk">Proxy Status / 진행 상태</span></label>
-      <select id="o-proxy-status"><option value="pending">Pending / 미처리</option><option value="done">Done / 완료</option></select>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">배송비 (₩)</span></label><input type="number" id="o-ship" placeholder="0"></div>
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Status</span></label>
+        <select id="o-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select>
+      </div>
     </div>
   </div>
   <hr class="divider">
-  <div class="field"><label><span class="lk">Payment Method / 결제 방식</span></label>
-    <select id="o-payment"><option value="credit">On Credit / 외상 (월말 정산)</option><option value="cash">Cash / 현금</option><option value="transfer">Bank Transfer / 계좌이체</option></select>
+  <div class="field"><label><span class="lk">Payment / 결제</span></label>
+    <select id="o-payment"><option value="credit">외상 (월말 정산)</option><option value="cash">현금</option><option value="transfer">계좌이체</option></select>
   </div>
-  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="Delivery address, special request..."></div>
+  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="o-note" placeholder="배송지, 특이사항..."></div>
   <div class="mact">
     <button class="btn" onclick="closeModal('modal-order')">Cancel</button>
     <button class="btn btn-p" style="padding:10px 28px;font-size:13px" onclick="saveOrder()">Save Order</button>
@@ -757,7 +767,8 @@ function openModal(id){
     document.getElementById('o-date').value=nowDate();
     document.getElementById('o-customer-text').value='';
     document.getElementById('o-customer').value='';
-    populateSel('o-product',products.map(p=>({v:p.id,l:`${p.name} (stock: ${p.stock})`})));
+    document.getElementById('stock-lines').innerHTML=renderStockLine();
+    document.getElementById('proxy-lines').innerHTML=renderProxyLine();
     setOrderType('stock');
   }
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
@@ -867,12 +878,39 @@ function hideACAfterDelay(){setTimeout(()=>{const ac=document.getElementById('o-
 function setOrderType(t){
   document.getElementById('stock-fields').style.display=t==='stock'?'block':'none';
   document.getElementById('proxy-fields').style.display=t==='proxy'?'block':'none';
-  document.getElementById('tt-stock').className='tt'+(t==='stock'?' sel-stock':'');
-  document.getElementById('tt-proxy').className='tt'+(t==='proxy'?' sel-proxy':'');
+  document.getElementById('tt-stock').className='tt-sm'+(t==='stock'?' sel-stock':'');
+  document.getElementById('tt-proxy').className='tt-sm'+(t==='proxy'?' sel-proxy':'');
   document.getElementById('modal-order').dataset.otype=t;
 }
-function fillStockPrice(){const p=getP(document.getElementById('o-product').value);if(p){document.getElementById('o-unit').value=p.price;calcStockTotal()}}
-function calcStockTotal(){document.getElementById('o-total').value=Number(document.getElementById('o-qty').value||0)*Number(document.getElementById('o-unit').value||0)}
+
+function renderStockLine(line={}){
+  const opts=products.map(p=>`<option value="${p.id}"${p.id==line.pid?' selected':''}>${p.name} (재고:${p.stock})</option>`).join('');
+  const unit=line.unit||'';
+  const qty=line.qty||1;
+  const total=unit&&qty?'₩'+(qty*unit).toLocaleString():'₩0';
+  return `<div class="order-line">
+    <select class="ol-product" onchange="fillLinePrice(this)"><option value="">상품 선택...</option>${opts}</select>
+    <input type="number" class="ol-qty" value="${qty}" min="1" oninput="calcLineTotal(this)" style="width:52px;text-align:center">
+    <input type="number" class="ol-unit" value="${unit}" readonly style="width:82px;text-align:right">
+    <span class="ol-total">${total}</span>
+    <button class="ol-add-btn" onclick="addStockLine()">+</button>
+    <button class="ol-del-btn" onclick="removeOrderLine(this)">×</button>
+  </div>`;
+}
+function renderProxyLine(line={}){
+  return `<div class="order-line">
+    <input type="text" class="ol-desc" placeholder="상품명·내용" value="${line.desc||''}">
+    <input type="number" class="ol-cost" placeholder="원가" value="${line.cost||''}" style="width:82px;text-align:right">
+    <input type="number" class="ol-charge" placeholder="청구액" value="${line.charge||''}" style="width:82px;text-align:right">
+    <button class="ol-add-btn" onclick="addProxyLine()">+</button>
+    <button class="ol-del-btn" onclick="removeOrderLine(this)">×</button>
+  </div>`;
+}
+function addStockLine(){document.getElementById('stock-lines').insertAdjacentHTML('beforeend',renderStockLine());const ls=document.querySelectorAll('#stock-lines .ol-product');ls[ls.length-1].focus()}
+function addProxyLine(){document.getElementById('proxy-lines').insertAdjacentHTML('beforeend',renderProxyLine());const ls=document.querySelectorAll('#proxy-lines .ol-desc');ls[ls.length-1].focus()}
+function removeOrderLine(btn){const line=btn.closest('.order-line');if(line.parentElement.children.length>1)line.remove()}
+function fillLinePrice(sel){const p=getP(sel.value);if(p){const line=sel.closest('.order-line');line.querySelector('.ol-unit').value=p.price;calcLineTotal(sel)}}
+function calcLineTotal(el){const line=el.closest('.order-line');const qty=Number(line.querySelector('.ol-qty').value)||0;const unit=Number(line.querySelector('.ol-unit').value)||0;const tot=line.querySelector('.ol-total');if(tot)tot.textContent='₩'+(qty*unit).toLocaleString()}
 
 async function saveOrder(){
   const otype=document.getElementById('modal-order').dataset.otype||'stock';
@@ -881,27 +919,34 @@ async function saveOrder(){
   const date=document.getElementById('o-date').value;
   let o={id:newId(orders),date,customerId:custId,type:otype,note:document.getElementById('o-note').value};
   if(otype==='stock'){
-    const pid=document.getElementById('o-product').value;
-    if(!pid){alert('Please select a product.');return}
-    const qty=Number(document.getElementById('o-qty').value);
-    const unit=Number(document.getElementById('o-unit').value);
-    const p=getP(pid);
-    if(p&&Number(p.stock)<qty){alert(`Insufficient stock! Current: ${p.stock}`);return}
-    o={...o,productId:pid,qty,cost:0,shippingCost:0,charge:qty*unit,platform:'',receiptNo:'',
-       desc:p?p.name:'',payment:document.getElementById('o-payment').value,proxyStatus:'done',url:''};
-    if(p){p.stock=Number(p.stock)-qty;LS.set('products',products);await updateRow('Products',pid,{stock:p.stock})}
-    const io={id:newId(inouts),date,productId:pid,type:'out',qty,note:'Sale'};
-    inouts.push(io);LS.set('inouts',inouts);
-    await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note});
+    const lines=[...document.querySelectorAll('#stock-lines .order-line')];
+    const items=lines.map(l=>({pid:l.querySelector('.ol-product').value,qty:Number(l.querySelector('.ol-qty').value)||1,unit:Number(l.querySelector('.ol-unit').value)||0})).filter(i=>i.pid);
+    if(!items.length){alert('상품을 선택해주세요.');return}
+    for(const item of items){const p=getP(item.pid);if(p&&Number(p.stock)<item.qty){alert(`${p.name}: 재고 부족 (현재: ${p.stock})`);return}}
+    const totalCharge=items.reduce((s,i)=>s+i.qty*i.unit,0);
+    const desc=items.map(i=>{const p=getP(i.pid);return p?(i.qty>1?`${p.name}×${i.qty}`:p.name):''}).filter(Boolean).join(', ');
+    o={...o,productId:items[0].pid,qty:items.reduce((s,i)=>s+i.qty,0),cost:0,shippingCost:0,
+       charge:totalCharge,platform:'',receiptNo:'',
+       desc,payment:document.getElementById('o-payment').value,proxyStatus:'done',url:''};
+    for(const item of items){
+      const p=getP(item.pid);
+      if(p){p.stock=Number(p.stock)-item.qty;LS.set('products',products);await updateRow('Products',item.pid,{stock:p.stock})}
+      const io={id:newId(inouts),date,productId:item.pid,type:'out',qty:item.qty,note:'Sale'};
+      inouts.push(io);LS.set('inouts',inouts);
+      await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note});
+    }
   }else{
-    o={...o,productId:'',qty:1,
-       desc:document.getElementById('o-pdesc').value,
-       url:document.getElementById('o-url').value,
+    const lines=[...document.querySelectorAll('#proxy-lines .order-line')];
+    const items=lines.map(l=>({desc:l.querySelector('.ol-desc').value.trim(),cost:Number(l.querySelector('.ol-cost').value)||0,charge:Number(l.querySelector('.ol-charge').value)||0})).filter(i=>i.desc||i.charge);
+    if(!items.length){alert('상품 내용을 입력해주세요.');return}
+    const desc=items.map(i=>i.desc).filter(Boolean).join(', ');
+    o={...o,productId:'',qty:items.length,
+       desc,url:'',
        platform:document.getElementById('o-platform').value,
        receiptNo:document.getElementById('o-receipt').value,
-       cost:Number(document.getElementById('o-cost').value),
+       cost:items.reduce((s,i)=>s+i.cost,0),
        shippingCost:Number(document.getElementById('o-ship').value),
-       charge:Number(document.getElementById('o-charge').value),
+       charge:items.reduce((s,i)=>s+i.charge,0),
        payment:document.getElementById('o-payment').value,
        proxyStatus:document.getElementById('o-proxy-status').value};
   }
