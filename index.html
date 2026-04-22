@@ -785,10 +785,12 @@ async function syncFromSheets(silent=false){
     const noDel=(arr,sheet)=>(arr||[]).filter(r=>!(_del[sheet]||[]).includes(String(r.id).trim()));
     if(Array.isArray(res.customers)){customers=noDel(res.customers,'Customers');LS.set('customers',customers)}
     if(Array.isArray(res.products)){products=noDel(res.products,'Products');LS.set('products',products)}
-    if(Array.isArray(res.orders)){orders=noDel(res.orders,'Orders').map(o=>({...o,date:normDate(o.date)}));LS.set('orders',orders)}
-    if(Array.isArray(res.inouts)){inouts=noDel(res.inouts,'StockMovements').map(o=>({...o,date:normDate(o.date)}));LS.set('inouts',inouts)}
+    if(Array.isArray(res.orders)){orders=noDel(res.orders,'Orders').map(o=>{let items=o.items;if(typeof items==='string'){try{items=JSON.parse(items)}catch{items=null}}return{...o,date:normDate(o.date),items:Array.isArray(items)&&items.length?items:undefined};});LS.set('orders',orders)}
+    if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});inouts=noDel(res.inouts,'StockMovements').map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});LS.set('inouts',inouts)}
     if(Array.isArray(res.events)){events=noDel(res.events,'Events').map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));LS.set('events',events)}
     if(Array.isArray(res.expenses)){expenses=noDel(res.expenses,'Expenses').map(e=>({...e,date:normDate(e.date)}));LS.set('expenses',expenses)}
+    /* 고아 inout 정리: orderId 있는 Sale-out 중 매칭 주문 없는 것 제거 */
+    {const oIds=new Set(orders.map(o=>String(o.id)));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&!oIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
     setSS('connected');
     if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
@@ -1423,7 +1425,8 @@ async function deleteOrder(id){
   if(o&&o.payment==='credit')await recalcCustomerOutstanding(o.customerId);
   /* ── 재고 복원 + inout 삭제 (stock 주문만) ── */
   if(o&&o.type==='stock'){
-    const ioItems=o.items||[{pid:o.productId,qty:o.qty}];
+    let _rawItems=o.items;if(typeof _rawItems==='string'){try{_rawItems=JSON.parse(_rawItems)}catch{_rawItems=null}}
+    const ioItems=(Array.isArray(_rawItems)&&_rawItems.length)?_rawItems:[{pid:o.productId,qty:o.qty}];
     const removedIoIds=[];
     for(const item of ioItems){
       /* orderId 연결된 기록 우선, 없으면 날짜+상품+타입으로 매칭 (중복 방지) */
