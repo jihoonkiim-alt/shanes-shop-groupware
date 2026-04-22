@@ -342,7 +342,7 @@ tr:hover td{background:var(--bg)}
   <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button><button class="btn" onclick="dlInventory()">⬇ .xlsx</button></div></div>
   <div class="stats" id="inv-stats"></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div></div>
-    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Level</span><span class="tk">재고율</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
+    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Movements</div><div class="ck">최근 입출고</div></div></div>
     <div style="overflow-x:auto"><table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Product</span><span class="tk">상품</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Qty</span><span class="tk">수량</span></th><th><span class="te">Note</span><span class="tk">비고</span></th><th style="width:1%;white-space:nowrap"></th></tr></thead><tbody id="inout-table"></tbody></table></div></div>
 </div>
@@ -786,7 +786,7 @@ async function syncFromSheets(silent=false){
     if(Array.isArray(res.customers)){customers=noDel(res.customers,'Customers');LS.set('customers',customers)}
     if(Array.isArray(res.products)){products=noDel(res.products,'Products');LS.set('products',products)}
     if(Array.isArray(res.orders)){orders=noDel(res.orders,'Orders').map(o=>{let items=o.items;if(typeof items==='string'){try{items=JSON.parse(items)}catch{items=null}}return{...o,date:normDate(o.date),items:Array.isArray(items)&&items.length?items:undefined};});LS.set('orders',orders)}
-    if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});inouts=noDel(res.inouts,'StockMovements').map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});LS.set('inouts',inouts)}
+    if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});const sheetsIoIds=new Set(res.inouts.map(io=>String(io.id).trim()));const localOnly=noDel((inouts||[]).filter(io=>!sheetsIoIds.has(String(io.id).trim())),'StockMovements');const fromSheets=noDel(res.inouts,'StockMovements').map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});inouts=[...fromSheets,...localOnly];LS.set('inouts',inouts)}
     if(Array.isArray(res.events)){events=noDel(res.events,'Events').map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));LS.set('events',events)}
     if(Array.isArray(res.expenses)){expenses=noDel(res.expenses,'Expenses').map(e=>({...e,date:normDate(e.date)}));LS.set('expenses',expenses)}
     /* 고아 inout 정리: orderId 있는 Sale-out 중 매칭 주문 없는 것 제거 */
@@ -1147,7 +1147,7 @@ async function saveOrder(){
   await pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId||'',
     qty:o.qty,cost:o.cost,shippingCost:o.shippingCost||0,charge:o.charge,platform:o.platform||'',
     receiptNo:o.receiptNo||'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:o.url||''});
-  closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();
+  closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
 }
 
 /* ── PRODUCT ───────────────────────────────────────────────────────────── */
@@ -1658,9 +1658,8 @@ function renderInventory(){
     `<div class="stat" onclick="detInv('low')"><div class="sk">Low Stock</div><div class="se">부족 상품</div><div class="sv ${lc>0?'red':''}">${lc}</div></div>`+
     `<div class="stat" onclick="detInv('value')"><div class="sk">Inventory Value</div><div class="se">재고 자산</div><div class="sv green">${won(tv)}</div></div>`;
   document.getElementById('product-table').innerHTML=products.length?products.map(p=>{
-    const pct=Math.min(100,Math.round(Number(p.stock)/(Number(p.minStock)*4||20)*100));
     const col=p.stock==0?'var(--red)':Number(p.stock)<=Number(p.minStock)?'var(--amber)':'var(--green)';
-    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td><div class="stock-bar-w"><div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${col}"></div></div><div class="stock-pct">${pct}%</div></div></td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
+    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">No products yet</td></tr>';
   const tMap={in:'<span class="badge bg-green"><span class="bk">In</span><span class="be">입고</span></span>',out:'<span class="badge bg-blue"><span class="bk">Out</span><span class="be">출고</span></span>',adjust:'<span class="badge bg-gray"><span class="bk">Adjust</span><span class="be">조정</span></span>'};
   const recent=[...inouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
