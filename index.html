@@ -567,17 +567,17 @@ tr:hover td{background:var(--bg)}
 <!-- MODAL: Product -->
 <div class="modal-overlay" id="overlay-product" onclick="if(event.target===this)closeModal('modal-product')">
 <div class="modal" id="modal-product">
-  <div class="mth"><div class="me">Add Stock Product</div><div class="mk">재고 상품 추가</div></div>
+  <div class="mth"><div class="me" id="p-modal-title-e">Add Stock Product</div><div class="mk" id="p-modal-title-k">재고 상품 추가</div></div>
   <div class="field"><label><span class="lk">Product Name / 상품명</span></label><input type="text" id="p-name" placeholder="e.g. BBW Body Lotion 250ml"></div>
   <div class="field"><label><span class="lk">Category / 카테고리</span></label><select id="p-cat"><option>Body Care</option><option>Fragrance</option><option>Home Scent</option><option>Gifts</option><option>Other / 기타</option></select></div>
   <div style="display:flex;gap:10px">
     <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Cost Price / 원가 (₩)</span></label><input type="number" id="p-cost" placeholder="0" min="0" value="0"></div>
     <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Selling Price / 판매가 (₩)</span></label><input type="number" id="p-price" placeholder="0" min="0" value="0"></div>
   </div>
-  <div class="field"><label><span class="lk">Initial Stock / 초기 재고</span></label><input type="number" id="p-stock" value="0"></div>
+  <div class="field" id="p-stock-field"><label><span class="lk">Initial Stock / 초기 재고</span></label><input type="number" id="p-stock" value="0"></div>
   <div class="field"><label><span class="lk">Min Stock Alert / 최소 재고</span></label><input type="number" id="p-min" value="5"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><textarea id="p-note" placeholder="Product description..."></textarea></div>
-  <div class="mact"><button class="btn" onclick="closeModal('modal-product')">Cancel</button><button class="btn btn-p" onclick="saveProduct()">Save</button></div>
+  <div class="mact"><button class="btn" onclick="closeModal('modal-product')">Cancel</button><button class="btn btn-p" id="p-save-btn" onclick="saveProduct()">Save</button></div>
 </div>
 </div>
 
@@ -933,7 +933,7 @@ function openModal(id){
     setOrderType('stock');
   }
   if(id==='modal-customer'){delete document.getElementById('modal-customer').dataset.editId;document.querySelector('#modal-customer .me').textContent='Add Customer';document.querySelector('#modal-customer .mk').textContent='고객 추가';['c-name','c-contact','c-address','c-address2','c-sns','c-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-type').value='retail';document.getElementById('c-payment').value='credit';document.getElementById('c-limit').value='0';}
-  if(id==='modal-product'){['p-name','p-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('p-cost').value='0';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='0';document.getElementById('p-min').value='5';}
+  if(id==='modal-product'){delete document.getElementById('modal-product').dataset.editId;document.getElementById('p-modal-title-e').textContent='Add Stock Product';document.getElementById('p-modal-title-k').textContent='재고 상품 추가';document.getElementById('p-save-btn').textContent='Save';document.getElementById('p-stock-field').style.display='';document.getElementById('p-cat').value='Body Care';['p-name','p-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('p-cost').value='0';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='0';document.getElementById('p-min').value='5';}
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
   if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';document.getElementById('ev-recur').value='none';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
@@ -1144,18 +1144,47 @@ async function saveOrder(){
 }
 
 /* ── PRODUCT ───────────────────────────────────────────────────────────── */
+function openEditProduct(id){
+  const p=getP(id);if(!p)return;
+  document.getElementById('modal-product').dataset.editId=id;
+  document.getElementById('p-modal-title-e').textContent='Edit Product';
+  document.getElementById('p-modal-title-k').textContent='상품 수정';
+  document.getElementById('p-save-btn').textContent='Update';
+  document.getElementById('p-stock-field').style.display='none';
+  document.getElementById('p-name').value=p.name||'';
+  document.getElementById('p-cat').value=p.cat||'Body Care';
+  document.getElementById('p-cost').value=p.costPrice||0;
+  document.getElementById('p-price').value=p.price||0;
+  document.getElementById('p-min').value=p.minStock||5;
+  document.getElementById('p-note').value=p.note||'';
+  document.getElementById('overlay-product').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
 async function saveProduct(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){alert('Enter product name.');return}
-  const p={id:newId(products),name,cat:document.getElementById('p-cat').value,
-    costPrice:Number(document.getElementById('p-cost').value)||0,
-    price:Number(document.getElementById('p-price').value),
-    stock:Number(document.getElementById('p-stock').value),
-    minStock:Number(document.getElementById('p-min').value),
-    note:document.getElementById('p-note').value};
-  products.push(p);LS.set('products',products);
-  await pushRow('Products',{id:p.id,name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
-  closeModal('modal-product');toast('✓ Product added');renderInventory();renderDash();
+  const editId=document.getElementById('modal-product').dataset.editId;
+  if(editId){
+    const p=getP(editId);if(!p)return;
+    p.name=name;p.cat=document.getElementById('p-cat').value;
+    p.costPrice=Number(document.getElementById('p-cost').value)||0;
+    p.price=Number(document.getElementById('p-price').value);
+    p.minStock=Number(document.getElementById('p-min').value);
+    p.note=document.getElementById('p-note').value;
+    LS.set('products',products);
+    await updateRow('Products',editId,{name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,minStock:p.minStock,note:p.note});
+    closeModal('modal-product');toast('✓ Product updated');renderInventory();renderDash();
+  }else{
+    const p={id:newId(products),name,cat:document.getElementById('p-cat').value,
+      costPrice:Number(document.getElementById('p-cost').value)||0,
+      price:Number(document.getElementById('p-price').value),
+      stock:Number(document.getElementById('p-stock').value),
+      minStock:Number(document.getElementById('p-min').value),
+      note:document.getElementById('p-note').value};
+    products.push(p);LS.set('products',products);
+    await pushRow('Products',{id:p.id,name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
+    closeModal('modal-product');toast('✓ Product added');renderInventory();renderDash();
+  }
 }
 
 /* ── INOUT ─────────────────────────────────────────────────────────────── */
@@ -1526,7 +1555,7 @@ function renderInventory(){
   document.getElementById('product-table').innerHTML=products.length?products.map(p=>{
     const pct=Math.min(100,Math.round(Number(p.stock)/(Number(p.minStock)*4||20)*100));
     const col=p.stock==0?'var(--red)':Number(p.stock)<=Number(p.minStock)?'var(--amber)':'var(--green)';
-    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td><div class="stock-bar-w"><div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${col}"></div></div><div class="stock-pct">${pct}%</div></div></td><td><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
+    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td><div class="stock-bar-w"><div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${col}"></div></div><div class="stock-pct">${pct}%</div></div></td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">No products yet</td></tr>';
   const tMap={in:'<span class="badge bg-green"><span class="bk">In</span><span class="be">입고</span></span>',out:'<span class="badge bg-blue"><span class="bk">Out</span><span class="be">출고</span></span>',adjust:'<span class="badge bg-gray"><span class="bk">Adjust</span><span class="be">조정</span></span>'};
   const recent=[...inouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
