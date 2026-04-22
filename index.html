@@ -750,8 +750,8 @@ let products=LS.get('products'),inouts=LS.get('inouts'),
     customers=LS.get('customers'),
     events=(LS.get('events')||[]).map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)})),
     expenses=(LS.get('expenses')||[]).map(e=>({...e,date:normDate(e.date)})),
-    invExtras=LS.get('invExtras')||{},
-    settlements=LS.get('settlements')||{},
+    invExtras=(()=>{let v;try{v=JSON.parse(localStorage.getItem('shs_invExtras')||'{}')}catch{v={}}; return(!v||Array.isArray(v)||typeof v!=='object')?{}:v;})(),
+    settlements=(()=>{let v;try{v=JSON.parse(localStorage.getItem('shs_settlements')||'{}')}catch{v={}}; return(!v||Array.isArray(v)||typeof v!=='object')?{}:v;})(),
     calYear,calMonth;
 
 /* ── SHEETS API ────────────────────────────────────────────────────────── */
@@ -1821,7 +1821,7 @@ function openInvoiceModal(cid){
   const extraKey=`${cid}-${month}`;
   const extraCharge=invExtras[extraKey]||0;
   const grandTotal=subtotal+totalShipping+extraCharge;
-  const isOut=Number(c.outstanding)>0;
+  const isOut=!settlements[extraKey]; // 이번 달 정산 여부 기준
   const payLabel={credit:'On Credit / 외상',cash:'Cash / 현금',transfer:'Bank Transfer / 계좌이체',mixed:'Mixed / 혼합'};
   const itemRows=cOrders.length?cOrders.map((o,i)=>`
     <tr>
