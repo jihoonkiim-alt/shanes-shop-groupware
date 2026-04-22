@@ -838,7 +838,9 @@ function populateSel(id,opts){document.getElementById(id).innerHTML='<option val
 
 function sBadge(o){
   if(o.type==='proxy')return o.proxyStatus==='done'?'<span class="badge bg-green"><span class="bk">Done</span><span class="be">완료</span></span>':'<span class="badge bg-amber"><span class="bk">Pending</span><span class="be">미처리</span></span>';
-  return o.payment==='credit'?'<span class="badge bg-blue"><span class="bk">Credit</span><span class="be">외상</span></span>':'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
+  if(o.payment!=='credit')return'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
+  const settled=!!settlements[`${o.customerId}-${(o.date||'').slice(0,7)}`];
+  return settled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>';
 }
 function pBadge(p){
   const m={credit:'Credit/외상',cash:'Cash/현금',transfer:'Transfer/이체',mixed:'Mixed/혼합'};
@@ -1686,7 +1688,12 @@ function renderOrders(){
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
-    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td>${o.type==='proxy'?`<span class="mono">${won(totalCost)}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${o.type==='proxy'?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`:''}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
+    const settlKey=`${o.customerId}-${(o.date||'').slice(0,7)}`;
+    const isSettled=!!settlements[settlKey];
+    const actionBtn=o.type==='proxy'
+      ?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`
+      :(o.type==='stock'&&o.payment==='credit'?`<button class="btn btn-xs ${isSettled?'':'btn-p'}" style="margin-right:3px" onclick="toggleSettled(${o.customerId},'${(o.date||'').slice(0,7)}',event)">${isSettled?'↩ 정산취소':'✓ 정산완료'}</button>`:'');
+    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td><span class="mono">${totalCost>0?won(totalCost):'—'}</span></td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${actionBtn}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="10" class="empty">No orders for this period</td></tr>';
 }
 
@@ -1911,7 +1918,7 @@ async function toggleSettled(cid,month,e){
   LS.set('settlements',settlements);
   await recalcCustomerOutstanding(cid);
   toast(wasSettled?'↩ 정산 취소됨':'✓ 정산 완료');
-  renderInvoices();
+  renderInvoices();renderOrders();renderDash();
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
