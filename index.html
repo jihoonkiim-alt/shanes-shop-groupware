@@ -1433,40 +1433,49 @@ function dzLeaveOrd(e){document.getElementById('order-import-dz').classList.remo
 function dzDropOrd(e){e.preventDefault();document.getElementById('order-import-dz').classList.remove('drag-over');const file=e.dataTransfer.files[0];if(!file)return;importOrdersXLSX({files:[file],value:''});}
 function dlOrderTemplate(){
   const wb=XLSX.utils.book_new();
-  const custEnd=Math.max(customers.length,1)+1;
-  const prodEnd=Math.max(products.length,1)+1;
-  const dv=(sqref,f1)=>({type:'list',sqref,formula1:f1,showDropDown:false,showErrorMessage:true,error:'목록에서 선택해주세요',errorTitle:'입력 오류'});
+  const custLast=customers.length+1; // last data row index in Customers sheet
+  const prodLast=products.length+1;
+
+  // ── Sheet 3: Customers (드롭다운 소스 — 먼저 빌드)
+  const wsCust=XLSX.utils.aoa_to_sheet([['Customer Name','Contact'],...customers.map(c=>[c.name,c.contact||''])]);
+  wsCust['!cols']=[{wch:24},{wch:16}];
+
+  // ── Sheet 4: Products (드롭다운 + VLOOKUP 소스)
+  const wsProd=XLSX.utils.aoa_to_sheet([['Product Name','Selling Price'],...products.map(p=>[p.name,p.price||0])]);
+  wsProd['!cols']=[{wch:24},{wch:14}];
 
   // ── Sheet 1: Proxy Orders
   const wsP=XLSX.utils.aoa_to_sheet([
     ['Date','Customer','Item','Cost','Charge','Payment','Platform','Shipping','Note'],
-    [nowDate(),'','','0','0','credit','coupang','0','']
+    [nowDate(),'','',0,0,'credit','',0,'']
   ]);
   wsP['!cols']=[{wch:12},{wch:22},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:22}];
   wsP['!dataValidation']=[
-    dv('B2:B5000',`Customers!$A$2:$A$${custEnd}`),
-    dv('F2:F5000','"credit,cash"')
+    {type:'list',sqref:'B2:B5000',formula1:`Customers!$A$2:$A$${custLast}`},
+    {type:'list',sqref:'F2:F5000',formula1:'"credit,cash"'}
   ];
 
-  // ── Sheet 2: Stock Orders
-  const wsS=XLSX.utils.aoa_to_sheet([
-    ['Date','Customer','Product','Qty','Unit Price','Payment','Shipping','Note'],
-    [nowDate(),'','','1','','credit','0','']
-  ]);
+  // ── Sheet 2: Stock Orders — E열(Unit Price)에 VLOOKUP 수식 (행 2~201)
+  const stockAOA=[['Date','Customer','Product','Qty','Unit Price','Payment','Shipping','Note']];
+  for(let r=2;r<=201;r++){
+    stockAOA.push([
+      r===2?nowDate():'',
+      '',
+      '',
+      r===2?1:'',
+      {t:'n',f:`IFERROR(VLOOKUP(C${r},Products!$A:$B,2,0),"")`},
+      r===2?'credit':'',
+      r===2?0:'',
+      ''
+    ]);
+  }
+  const wsS=XLSX.utils.aoa_to_sheet(stockAOA);
   wsS['!cols']=[{wch:12},{wch:22},{wch:22},{wch:8},{wch:14},{wch:10},{wch:10},{wch:22}];
   wsS['!dataValidation']=[
-    dv('B2:B5000',`Customers!$A$2:$A$${custEnd}`),
-    dv('C2:C5000',`Products!$A$2:$A$${prodEnd}`),
-    dv('F2:F5000','"credit,cash"')
+    {type:'list',sqref:'B2:B5000',formula1:`Customers!$A$2:$A$${custLast}`},
+    {type:'list',sqref:'C2:C5000',formula1:`Products!$A$2:$A$${prodLast}`},
+    {type:'list',sqref:'F2:F5000',formula1:'"credit,cash"'}
   ];
-
-  // ── Sheet 3: Customers (reference)
-  const wsCust=XLSX.utils.aoa_to_sheet([['Customer Name','Contact'],...customers.map(c=>[c.name,c.contact||''])]);
-  wsCust['!cols']=[{wch:24},{wch:16}];
-
-  // ── Sheet 4: Products (reference)
-  const wsProd=XLSX.utils.aoa_to_sheet([['Product Name','Selling Price'],...products.map(p=>[p.name,p.price||0])]);
-  wsProd['!cols']=[{wch:24},{wch:14}];
 
   XLSX.utils.book_append_sheet(wb,wsP,'Proxy Orders');
   XLSX.utils.book_append_sheet(wb,wsS,'Stock Orders');
