@@ -353,8 +353,8 @@ tr:hover td{background:var(--bg)}
   <label class="dropzone" id="order-import-dz" ondragover="dzOverOrd(event)" ondragleave="dzLeaveOrd(event)" ondrop="dzDropOrd(event)" onclick="document.getElementById('order-import-file').click()">
     <input type="file" id="order-import-file" accept=".xlsx,.xls" onchange="importOrdersXLSX(this)">
     <div class="dz-icon">📊</div>
-    <div class="dz-t">Import Proxy Orders (.xlsx)</div>
-    <div class="dz-s">헤더: Date · Customer · Item · Cost · Charge · Payment · Platform · Shipping · Note &nbsp;·&nbsp; Charge 비워두면 나중에 수정 가능</div>
+    <div class="dz-t">Import Orders (.xlsx) — 구매대행 / 재고판매</div>
+    <div class="dz-s">템플릿 다운 후 "Proxy Orders" 또는 "Stock Orders" 시트 작성 &nbsp;·&nbsp; 고객·상품은 드롭다운으로 선택</div>
   </label>
   <div class="stats" id="sales-stats"></div>
   <div class="card"><div class="ch">
@@ -1340,19 +1340,21 @@ function importOrdersXLSX(input){
   reader.onload=e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      if(!rows.length){toast('⚠ No data found');input.value='';return;}
       function mf(row,keys){const rl={};Object.keys(row).forEach(k=>rl[k.toLowerCase().trim()]=row[k]);for(const k of keys){const v=rl[k.toLowerCase()];if(v!==undefined&&String(v).trim()!='')return String(v).trim();}return '';}
-      let added=0,skipped=0,skipNames=[];
-      rows.forEach(row=>{
+      function pdate(raw){if(!raw)return nowDate();try{const d=new Date(raw);if(!isNaN(d))return d.toISOString().slice(0,10);}catch{}return nowDate();}
+      let addedP=0,addedS=0,skipped=0,skipNames=[];
+      const newProxyOrders=[],newStockEntries=[];
+      const affectedCusts=new Set();
+
+      // ── Proxy Orders (first sheet or sheet named "Proxy Orders")
+      const proxyName=wb.SheetNames.find(n=>/proxy/i.test(n))||wb.SheetNames[0];
+      const proxyRows=wb.Sheets[proxyName]?XLSX.utils.sheet_to_json(wb.Sheets[proxyName],{defval:''}):[];
+      proxyRows.forEach(row=>{
         const cname=mf(row,['customer','고객명','name','이름','고객']);
         if(!cname){skipped++;return;}
         const c=customers.find(x=>x.name.trim().toUpperCase()===cname.toUpperCase());
         if(!c){skipped++;skipNames.push(cname);return;}
-        const dateRaw=mf(row,['date','날짜','일자']);
-        let date=nowDate();
-        if(dateRaw){try{const d=new Date(dateRaw);if(!isNaN(d))date=d.toISOString().slice(0,10);}catch{}}
+        const date=pdate(mf(row,['date','날짜','일자']));
         const desc=mf(row,['item','description','상품','내용','품목','물품','desc']);
         const cost=Number(mf(row,['cost','원가','비용']))||0;
         const ship=Number(mf(row,['shipping','배송비','ship']))||0;
@@ -1363,16 +1365,64 @@ function importOrdersXLSX(input){
         const platform=platMap[platRaw]||platRaw||'';
         const note=mf(row,['note','메모','notes']);
         const o={id:newId(orders),date,customerId:c.id,type:'proxy',productId:'',qty:1,
-          desc:desc||'(미입력)',cost,shippingCost:ship,charge,platform,receiptNo:'',
-          payment,proxyStatus:'pending',url:'',note};
-        if(payment==='credit'&&c){c.outstanding=(Number(c.outstanding)||0)+charge;LS.set('customers',customers);}
-        orders.push(o);added++;
+          desc:desc||'(미입력)',cost,shippingCost:ship,charge,platform,receiptNo:'',payment,proxyStatus:'pending',url:'',note};
+        if(payment==='credit'){c.outstanding=(Number(c.outstanding)||0)+charge;affectedCusts.add(c.id);}
+        orders.push(o);newProxyOrders.push(o);addedP++;
       });
-      LS.set('orders',orders);
-      if(skipped>0)toast(`✓ ${added} imported · ${skipped} skipped (미등록 고객: ${skipNames.slice(0,3).join(', ')}${skipNames.length>3?'…':''})`);
-      else toast(`✓ ${added} orders imported`);
-      renderOrders();renderDash();
-      if(SCRIPT_URL){orders.slice(-added).forEach(o=>pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:'',qty:o.qty,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,platform:o.platform,receiptNo:'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:''}));}
+
+      // ── Stock Orders (sheet named "Stock Orders")
+      const stockName=wb.SheetNames.find(n=>/stock/i.test(n));
+      if(stockName&&wb.Sheets[stockName]){
+        const stockRows=XLSX.utils.sheet_to_json(wb.Sheets[stockName],{defval:''});
+        stockRows.forEach(row=>{
+          const cname=mf(row,['customer','고객명','고객']);
+          if(!cname){skipped++;return;}
+          const c=customers.find(x=>x.name.trim().toUpperCase()===cname.toUpperCase());
+          if(!c){skipped++;skipNames.push(cname);return;}
+          const pname=mf(row,['product','상품','상품명']);
+          if(!pname){skipped++;return;}
+          const p=products.find(x=>x.name.trim().toLowerCase()===pname.trim().toLowerCase());
+          if(!p){skipped++;skipNames.push(`상품미등록:${pname}`);return;}
+          const qty=Number(mf(row,['qty','수량']))||1;
+          if(Number(p.stock)<qty){skipped++;skipNames.push(`재고부족:${p.name}`);return;}
+          const unitPrice=Number(mf(row,['unit price','unitprice','price','단가','판매가']))||Number(p.price)||0;
+          const charge=qty*unitPrice;
+          const cost=qty*(Number(p.costPrice)||0);
+          const ship=Number(mf(row,['shipping','배송비','ship']))||0;
+          const payment=mf(row,['payment','결제방식','결제'])||'credit';
+          const note=mf(row,['note','메모','notes']);
+          const date=pdate(mf(row,['date','날짜','일자']));
+          const o={id:newId(orders),date,customerId:c.id,type:'stock',
+            productId:p.id,qty,cost,shippingCost:ship,charge,
+            desc:qty>1?`${p.name}×${qty}`:p.name,
+            platform:'',receiptNo:'',payment,proxyStatus:'done',url:'',note,
+            items:[{pid:p.id,qty}]};
+          p.stock=Number(p.stock)-qty;
+          const io={id:newId(inouts),date,productId:p.id,type:'out',qty,note:'Sale',orderId:o.id};
+          orders.push(o);inouts.push(io);
+          if(payment==='credit'){c.outstanding=(Number(c.outstanding)||0)+charge;affectedCusts.add(c.id);}
+          newStockEntries.push({o,p,io});addedS++;
+        });
+        LS.set('inouts',inouts);LS.set('products',products);
+      }
+
+      LS.set('orders',orders);LS.set('customers',customers);
+      const msgs=[];
+      if(addedP)msgs.push(`구매대행 ${addedP}건`);
+      if(addedS)msgs.push(`재고판매 ${addedS}건`);
+      if(skipped)msgs.push(`건너뜀 ${skipped}건 (${skipNames.slice(0,3).join(', ')}${skipNames.length>3?'…':''})`);
+      toast(msgs.length?`✓ ${msgs.join(' · ')}`:'⚠ 가져올 내용이 없습니다');
+      renderOrders();renderDash();if(addedS)renderInventory();
+
+      if(SCRIPT_URL){
+        newProxyOrders.forEach(o=>pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:'',qty:o.qty,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,platform:o.platform,receiptNo:'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:''}));
+        newStockEntries.forEach(({o,p,io})=>{
+          pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId,qty:o.qty,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,platform:'',receiptNo:'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:'',items:JSON.stringify(o.items)});
+          pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note,orderId:o.id});
+          updateRow('Products',p.id,{stock:p.stock});
+        });
+        [...affectedCusts].forEach(cid=>{const c=getC(cid);if(c)updateRow('Customers',c.id,{outstanding:c.outstanding||0});});
+      }
     }catch(err){toast('⚠ Failed: '+err.message)}
     input.value='';
   };
@@ -1382,9 +1432,46 @@ function dzOverOrd(e){e.preventDefault();document.getElementById('order-import-d
 function dzLeaveOrd(e){document.getElementById('order-import-dz').classList.remove('drag-over')}
 function dzDropOrd(e){e.preventDefault();document.getElementById('order-import-dz').classList.remove('drag-over');const file=e.dataTransfer.files[0];if(!file)return;importOrdersXLSX({files:[file],value:''});}
 function dlOrderTemplate(){
-  const ws=XLSX.utils.aoa_to_sheet([['Date','Customer','Item','Cost','Charge','Payment','Platform','Shipping','Note'],
-    [nowDate(),'고객이름 (등록된 이름 그대로)','상품명','원가','청구금액','credit','coupang','0','메모']]);
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Orders');
+  const wb=XLSX.utils.book_new();
+  const custEnd=Math.max(customers.length,1)+1;
+  const prodEnd=Math.max(products.length,1)+1;
+  const dv=(sqref,f1)=>({type:'list',sqref,formula1:f1,showDropDown:false,showErrorMessage:true,error:'목록에서 선택해주세요',errorTitle:'입력 오류'});
+
+  // ── Sheet 1: Proxy Orders
+  const wsP=XLSX.utils.aoa_to_sheet([
+    ['Date','Customer','Item','Cost','Charge','Payment','Platform','Shipping','Note'],
+    [nowDate(),'','','0','0','credit','coupang','0','']
+  ]);
+  wsP['!cols']=[{wch:12},{wch:22},{wch:28},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:22}];
+  wsP['!dataValidation']=[
+    dv('B2:B5000',`Customers!$A$2:$A$${custEnd}`),
+    dv('F2:F5000','"credit,cash"')
+  ];
+
+  // ── Sheet 2: Stock Orders
+  const wsS=XLSX.utils.aoa_to_sheet([
+    ['Date','Customer','Product','Qty','Unit Price','Payment','Shipping','Note'],
+    [nowDate(),'','','1','','credit','0','']
+  ]);
+  wsS['!cols']=[{wch:12},{wch:22},{wch:22},{wch:8},{wch:14},{wch:10},{wch:10},{wch:22}];
+  wsS['!dataValidation']=[
+    dv('B2:B5000',`Customers!$A$2:$A$${custEnd}`),
+    dv('C2:C5000',`Products!$A$2:$A$${prodEnd}`),
+    dv('F2:F5000','"credit,cash"')
+  ];
+
+  // ── Sheet 3: Customers (reference)
+  const wsCust=XLSX.utils.aoa_to_sheet([['Customer Name','Contact'],...customers.map(c=>[c.name,c.contact||''])]);
+  wsCust['!cols']=[{wch:24},{wch:16}];
+
+  // ── Sheet 4: Products (reference)
+  const wsProd=XLSX.utils.aoa_to_sheet([['Product Name','Selling Price'],...products.map(p=>[p.name,p.price||0])]);
+  wsProd['!cols']=[{wch:24},{wch:14}];
+
+  XLSX.utils.book_append_sheet(wb,wsP,'Proxy Orders');
+  XLSX.utils.book_append_sheet(wb,wsS,'Stock Orders');
+  XLSX.utils.book_append_sheet(wb,wsCust,'Customers');
+  XLSX.utils.book_append_sheet(wb,wsProd,'Products');
   XLSX.writeFile(wb,'order_template.xlsx');
 }
 
