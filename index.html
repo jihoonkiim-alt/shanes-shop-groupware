@@ -62,7 +62,7 @@ body{background:var(--bg)}
 .btn-xs{padding:4px 9px;font-size:10px}
 
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;cursor:pointer;transition:.15s;user-select:none}
 .stat:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.07)}
 .det-tbl{width:100%;border-collapse:collapse;font-size:12px}
@@ -1622,6 +1622,7 @@ function renderDash(){
   const mo=thisMO();
   const rev=mo.reduce((s,o)=>s+Number(o.charge),0);
   const pc=mo.filter(o=>o.type==='proxy').length;
+  const sc=mo.filter(o=>o.type==='stock').length;
   const out=customers.reduce((s,c)=>s+Number(c.outstanding||0),0);
   const moExp=expenses.filter(e=>e.date&&e.date.startsWith(nowYM())).reduce((s,e)=>s+Number(e.amount),0);
   const moCost=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
@@ -1629,7 +1630,8 @@ function renderDash(){
   document.getElementById('dash-stats').innerHTML=
     `<div class="stat" onclick="detDashRev()"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(rev)}</div></div>`+
     `<div class="stat" onclick="detDashProfit()"><div class="sk">Net Profit</div><div class="se">순이익 (비용 차감)</div><div class="sv ${profit>=0?'green':'red'}">${won(profit)}</div></div>`+
-    `<div class="stat" onclick="detDashProxy()"><div class="sk">Proxy Orders</div><div class="se">구매대행 ${pc}건</div><div class="sv purple">${pc}건 / ${mo.length}건</div></div>`+
+    `<div class="stat" onclick="detDashProxy()"><div class="sk">Proxy Orders</div><div class="se">구매대행</div><div class="sv purple">${pc}건</div></div>`+
+    `<div class="stat" onclick="detDashStock()"><div class="sk">Stock Sales</div><div class="se">재고판매</div><div class="sv blue">${sc}건</div></div>`+
     `<div class="stat" onclick="detDashOut()"><div class="sk">Outstanding</div><div class="se">전체 미수금</div><div class="sv ${out>0?'amber':''}">${won(out)}</div></div>`;
   const dashMonth=nowYM();
   document.getElementById('dash-billing').innerHTML=customers.map(c=>{
@@ -2176,6 +2178,11 @@ function detDashProxy(){
   const mo=thisMO().filter(o=>o.type==='proxy');
   const rows=mo.map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;}).join('');
   showStatDetail('Proxy Orders','구매대행 상세',`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">Charge</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan=5 class=empty>No proxy orders</td></tr>'}</tbody></table>`);
+}
+function detDashStock(){
+  const mo=thisMO().filter(o=>o.type==='stock');
+  const rows=mo.map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.cost||0)}</td><td class="mono r">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;}).join('');
+  showStatDetail('Stock Sales','재고판매 상세',`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Items</th><th class="r">Cost</th><th class="r">Charge</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class=empty>No stock sales</td></tr>'}</tbody></table>`);
 }
 function detDashOut(){
   const cs=customers.filter(c=>Number(c.outstanding)>0).sort((a,b)=>b.outstanding-a.outstanding);
