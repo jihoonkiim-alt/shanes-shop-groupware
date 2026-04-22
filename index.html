@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shane's Online Shop — Management</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -62,7 +63,18 @@ body{background:var(--bg)}
 
 /* STATS */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;cursor:pointer;transition:.15s;user-select:none}
+.stat:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.07)}
+.det-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.det-tbl th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;border-bottom:2px solid var(--border);text-align:left;white-space:nowrap}
+.det-tbl th.r,.det-tbl td.r{text-align:right}
+.det-tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px}
+.det-tbl td.mono{font-family:'DM Mono',monospace;font-weight:600}
+.det-tbl tbody tr:last-child td{border-bottom:none}
+.det-pnl{border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13px}
+.det-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.det-row:last-child{border-bottom:none}
+.det-row.total{font-weight:700;font-size:15px;background:var(--surface);border-top:2px solid var(--border2)}
 .stat .sk{font-size:11px;font-weight:600;color:var(--text2)}.stat .se{font-size:9px;color:var(--text3);margin-bottom:7px}
 .stat .sv{font-size:19px;font-weight:600;font-family:'DM Mono',monospace}
 .sv.green{color:var(--green)}.sv.amber{color:var(--amber)}.sv.red{color:var(--red)}.sv.blue{color:var(--blue)}.sv.purple{color:var(--purple)}
@@ -330,9 +342,9 @@ tr:hover td{background:var(--bg)}
   <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button><button class="btn" onclick="dlInventory()">⬇ .xlsx</button></div></div>
   <div class="stats" id="inv-stats"></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div></div>
-    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Price</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Level</span><span class="tk">재고율</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
+    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Level</span><span class="tk">재고율</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Movements</div><div class="ck">최근 입출고</div></div></div>
-    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Product</span><span class="tk">상품</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Qty</span><span class="tk">수량</span></th><th><span class="te">Note</span><span class="tk">비고</span></th></tr></thead><tbody id="inout-table"></tbody></table></div>
+    <div style="overflow-x:auto"><table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Product</span><span class="tk">상품</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Qty</span><span class="tk">수량</span></th><th><span class="te">Note</span><span class="tk">비고</span></th><th style="width:1%;white-space:nowrap"></th></tr></thead><tbody id="inout-table"></tbody></table></div></div>
 </div>
 
 <!-- SALES & BILLING -->
@@ -426,7 +438,7 @@ tr:hover td{background:var(--bg)}
       <button class="btn" onclick="dlInvoices()">⬇ .xlsx</button>
     </div>
   </div>
-  <div class="stats" id="inv-stats"></div>
+  <div class="stats" id="invtab-stats"></div>
   <div id="invoice-list"></div>
 </div>
 
@@ -500,6 +512,9 @@ tr:hover td{background:var(--bg)}
   <div id="stock-fields">
     <div class="order-lines-hd"><span style="flex:1">Product</span><span style="width:52px;text-align:center">Qty</span><span style="width:82px;text-align:right">Unit Price</span><span style="width:64px;text-align:right">Total</span><span style="width:57px"></span></div>
     <div id="stock-lines"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Shipping / 배송비 (₩)</span></label><input type="number" id="o-ship-stock" placeholder="0" min="0" value="0"></div>
+    </div>
   </div>
   <div id="proxy-fields">
     <div class="order-lines-hd"><span style="flex:1">Item</span><span style="width:82px;text-align:right">Cost</span><span style="width:82px;text-align:right">Charge</span><span style="width:100px">Platform</span><span style="width:57px"></span></div>
@@ -555,7 +570,10 @@ tr:hover td{background:var(--bg)}
   <div class="mth"><div class="me">Add Stock Product</div><div class="mk">재고 상품 추가</div></div>
   <div class="field"><label><span class="lk">Product Name / 상품명</span></label><input type="text" id="p-name" placeholder="e.g. BBW Body Lotion 250ml"></div>
   <div class="field"><label><span class="lk">Category / 카테고리</span></label><select id="p-cat"><option>Body Care</option><option>Fragrance</option><option>Home Scent</option><option>Gifts</option><option>Other / 기타</option></select></div>
-  <div class="field"><label><span class="lk">Price / 판매가 (₩)</span></label><input type="number" id="p-price" placeholder="0"></div>
+  <div style="display:flex;gap:10px">
+    <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Cost Price / 원가 (₩)</span></label><input type="number" id="p-cost" placeholder="0" min="0" value="0"></div>
+    <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Selling Price / 판매가 (₩)</span></label><input type="number" id="p-price" placeholder="0" min="0" value="0"></div>
+  </div>
   <div class="field"><label><span class="lk">Initial Stock / 초기 재고</span></label><input type="number" id="p-stock" value="0"></div>
   <div class="field"><label><span class="lk">Min Stock Alert / 최소 재고</span></label><input type="number" id="p-min" value="5"></div>
   <div class="field"><label><span class="lk">Note / 메모</span></label><textarea id="p-note" placeholder="Product description..."></textarea></div>
@@ -573,6 +591,19 @@ tr:hover td{background:var(--bg)}
   <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="io-qty" value="1" min="1"></div>
   <div class="field"><label><span class="lk">Note / 비고</span></label><input type="text" id="io-note" placeholder="e.g. Coupang restock"></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-inout')">Cancel</button><button class="btn btn-p" onclick="saveInout()">Save</button></div>
+</div>
+</div>
+
+<!-- MODAL: Edit Stock Movement -->
+<div class="modal-overlay" id="overlay-edit-inout" onclick="if(event.target===this)closeModal('modal-edit-inout')">
+<div class="modal" id="modal-edit-inout">
+  <div class="mth"><div class="me">Edit Movement</div><div class="mk">입출고 수정</div></div>
+  <div class="field"><label><span class="lk">Date / 일자</span></label><input type="date" id="eio-date"></div>
+  <div class="field"><label><span class="lk">Product / 상품</span></label><input type="text" id="eio-product-name" readonly style="background:var(--bg);color:var(--text2)"></div>
+  <div class="field"><label><span class="lk">Type / 구분</span></label><select id="eio-type"><option value="in">Stock In / 입고</option><option value="out">Stock Out / 출고</option><option value="adjust">Adjust / 재고조정</option></select></div>
+  <div class="field"><label><span class="lk">Qty / 수량</span></label><input type="number" id="eio-qty" value="1" min="1"></div>
+  <div class="field"><label><span class="lk">Note / 비고</span></label><input type="text" id="eio-note"></div>
+  <div class="mact"><button class="btn" onclick="closeModal('modal-edit-inout')">Cancel</button><button class="btn btn-p" onclick="saveEditInout()">Update</button></div>
 </div>
 </div>
 
@@ -616,6 +647,7 @@ tr:hover td{background:var(--bg)}
   <div class="field"><label><span class="lk">Title (English)</span></label><input type="text" id="ev-en" placeholder="e.g. Month-end billing"></div>
   <div class="field"><label><span class="lk">제목 (한국어)</span></label><input type="text" id="ev-ko" placeholder="예: 월말 청구 마감"></div>
   <div class="field"><label><span class="lk">Category / 구분</span></label><select id="ev-type"><option value="billing">Billing / 청구</option><option value="order">Order·Delivery / 주문·배송</option><option value="note">Note / 메모</option><option value="personal">Personal / 개인</option></select></div>
+  <div class="field"><label><span class="lk">반복 / Recurrence</span></label><select id="ev-recur"><option value="none">1회성 (One-time)</option><option value="daily">매일 (Daily)</option><option value="weekly">매주 (Weekly)</option><option value="monthly">매월 (Monthly)</option><option value="yearly">매년 (Yearly)</option></select></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-event')">Cancel</button><button class="btn btn-p" onclick="saveEvent()">Save</button></div>
 </div>
 </div>
@@ -657,11 +689,69 @@ const LS={
   set(k,v){try{localStorage.setItem('shs_'+k,JSON.stringify(v))}catch{}}
 };
 function normDate(v){if(!v)return v;const s=String(v);if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const d=new Date(s);if(isNaN(d))return s;return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function dStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function expandEventsForMonth(ym){
+  const year=parseInt(ym),month=parseInt(ym.slice(5))-1;
+  const mFirst=ym+'-01',mLast=ym+'-'+String(new Date(year,month+1,0).getDate()).padStart(2,'0');
+  const result=[];
+  for(const ev of events){
+    if(!ev.date)continue;
+    const recur=ev.recur||'none';
+    const rawEnd=ev.dateEnd&&ev.dateEnd>=ev.date?ev.dateEnd:ev.date;
+    const dur=Math.round((new Date(rawEnd)-new Date(ev.date))/86400000);
+    if(recur==='none'){
+      if(ev.date<=mLast&&rawEnd>=mFirst)result.push(ev);
+      continue;
+    }
+    const evD=new Date(ev.date);
+    if(recur==='daily'){
+      const iterStart=new Date(Math.max(evD.getTime(),new Date(year,month,1-dur).getTime()));
+      for(let d=new Date(iterStart);dStr(d)<=mLast;d.setDate(d.getDate()+1)){
+        if(d<evD)continue;
+        const ds=dStr(d),nd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+dur),de=dStr(nd);
+        if(de<mFirst)continue;
+        result.push({...ev,date:ds,dateEnd:de});
+      }
+    } else if(recur==='weekly'){
+      const diffMs=new Date(year,month,1-dur).getTime()-evD.getTime();
+      const weeks=Math.max(0,Math.ceil(diffMs/(7*86400000)));
+      const startD=new Date(evD);startD.setDate(startD.getDate()+weeks*7);
+      for(let d=new Date(startD);dStr(d)<=mLast;d.setDate(d.getDate()+7)){
+        if(d<evD)continue;
+        const ds=dStr(d),nd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+dur),de=dStr(nd);
+        if(de<mFirst)continue;
+        result.push({...ev,date:ds,dateEnd:de});
+      }
+    } else if(recur==='monthly'){
+      const dom=evD.getDate();
+      for(let mo=month-1;mo<=month+1;mo++){
+        let y=year,m=mo;
+        if(m<0){m+=12;y--;}else if(m>11){m-=12;y++;}
+        const c=new Date(y,m,dom);
+        if(c.getDate()!==dom||c<evD)continue;
+        const ds=dStr(c),de=dStr(new Date(y,m,dom+dur));
+        if(de<mFirst||ds>mLast)continue;
+        result.push({...ev,date:ds,dateEnd:de});
+      }
+    } else if(recur==='yearly'){
+      for(let y=year-1;y<=year+1;y++){
+        const c=new Date(y,evD.getMonth(),evD.getDate());
+        if(c.getDate()!==evD.getDate()||c<evD)continue;
+        const ds=dStr(c),de=dStr(new Date(y,evD.getMonth(),evD.getDate()+dur));
+        if(de<mFirst||ds>mLast)continue;
+        result.push({...ev,date:ds,dateEnd:de});
+      }
+    }
+  }
+  return result;
+}
 let products=LS.get('products'),inouts=LS.get('inouts'),
     orders=(LS.get('orders')||[]).map(o=>({...o,date:normDate(o.date)})),
     customers=LS.get('customers'),
     events=(LS.get('events')||[]).map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)})),
     expenses=(LS.get('expenses')||[]).map(e=>({...e,date:normDate(e.date)})),
+    invExtras=LS.get('invExtras')||{},
+    settlements=LS.get('settlements')||{},
     calYear,calMonth;
 
 /* ── SHEETS API ────────────────────────────────────────────────────────── */
@@ -690,12 +780,15 @@ async function syncFromSheets(silent=false){
   if(!silent)setSS('syncing');
   const res=await sheetsReq('getAll');
   if(res&&res.ok){
-    if(res.customers?.length){customers=res.customers;LS.set('customers',customers)}
-    if(res.products?.length){products=res.products;LS.set('products',products)}
-    if(res.orders?.length){orders=res.orders.map(o=>({...o,date:normDate(o.date)}));LS.set('orders',orders)}
-    if(res.inouts?.length){inouts=res.inouts.map(o=>({...o,date:normDate(o.date)}));LS.set('inouts',inouts)}
-    if(res.events?.length){events=res.events.map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));LS.set('events',events)}
-    if(res.expenses?.length){expenses=res.expenses.map(e=>({...e,date:normDate(e.date)}));LS.set('expenses',expenses)}
+    let _del;try{_del=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_del={}}
+    if(!_del||Array.isArray(_del)||typeof _del!=='object')_del={};
+    const noDel=(arr,sheet)=>(arr||[]).filter(r=>!(_del[sheet]||[]).includes(String(r.id).trim()));
+    if(Array.isArray(res.customers)){customers=noDel(res.customers,'Customers');LS.set('customers',customers)}
+    if(Array.isArray(res.products)){products=noDel(res.products,'Products');LS.set('products',products)}
+    if(Array.isArray(res.orders)){orders=noDel(res.orders,'Orders').map(o=>({...o,date:normDate(o.date)}));LS.set('orders',orders)}
+    if(Array.isArray(res.inouts)){inouts=noDel(res.inouts,'StockMovements').map(o=>({...o,date:normDate(o.date)}));LS.set('inouts',inouts)}
+    if(Array.isArray(res.events)){events=noDel(res.events,'Events').map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));LS.set('events',events)}
+    if(Array.isArray(res.expenses)){expenses=noDel(res.expenses,'Expenses').map(e=>({...e,date:normDate(e.date)}));LS.set('expenses',expenses)}
     setSS('connected');
     if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
@@ -711,7 +804,14 @@ async function syncFromSheets(silent=false){
 }
 async function pushRow(sheet,obj){if(SCRIPT_URL)await sheetsReq('append',{sheet,row:obj})}
 async function updateRow(sheet,id,obj){if(SCRIPT_URL)await sheetsReq('update',{sheet,id,updates:obj})}
-async function deleteRow(sheet,id){if(SCRIPT_URL)await sheetsReq('delete',{sheet,id})}
+async function deleteRow(sheet,id){if(SCRIPT_URL)await sheetsReq('delete',{sheet,id});}
+function markDeleted(sheet,id){
+  let d;try{d=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{d={}}
+  if(!d||Array.isArray(d)||typeof d!=='object')d={};
+  if(!Array.isArray(d[sheet]))d[sheet]=[];
+  const s=String(id).trim();if(!d[sheet].includes(s))d[sheet].push(s);
+  localStorage.setItem('shs__del',JSON.stringify(d));
+}
 
 /* ── UI HELPERS ────────────────────────────────────────────────────────── */
 function setSS(s){
@@ -825,13 +925,15 @@ function openModal(id){
     document.getElementById('o-date').value=nowDate();
     document.getElementById('o-customer-text').value='';
     document.getElementById('o-customer').value='';
+    document.getElementById('o-ship-stock').value='0';
     document.getElementById('stock-lines').innerHTML=renderStockLine();
     document.getElementById('proxy-lines').innerHTML=renderProxyLine();
     setOrderType('stock');
   }
   if(id==='modal-customer'){delete document.getElementById('modal-customer').dataset.editId;document.querySelector('#modal-customer .me').textContent='Add Customer';document.querySelector('#modal-customer .mk').textContent='고객 추가';['c-name','c-contact','c-address','c-address2','c-sns','c-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-type').value='retail';document.getElementById('c-payment').value='credit';document.getElementById('c-limit').value='0';}
+  if(id==='modal-product'){['p-name','p-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('p-cost').value='0';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='0';document.getElementById('p-min').value='5';}
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
-  if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';}
+  if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';document.getElementById('ev-recur').value='none';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
   if(id==='modal-setup')document.getElementById('script-url-input').value=SCRIPT_URL;
   const ov=document.getElementById('overlay-'+key);
@@ -957,7 +1059,7 @@ function setOrderType(t){
 }
 
 function renderStockLine(line={}){
-  const opts=products.map(p=>`<option value="${p.id}"${p.id==line.pid?' selected':''}>${p.name} (stock:${p.stock})</option>`).join('');
+  const opts=products.map(p=>`<option value="${p.id}"${p.id==line.pid?' selected':''}>${p.name} (재고:${p.stock} / 판매가:${won(p.price)})</option>`).join('');
   const unit=line.unit||'';
   const qty=line.qty||1;
   const total=unit&&qty?'₩'+(qty*unit).toLocaleString():'₩0';
@@ -993,6 +1095,7 @@ async function saveOrder(){
   const custId=document.getElementById('o-customer').value;
   if(!custId){alert('Please select a customer.');return}
   const date=document.getElementById('o-date').value;
+  if(!date){alert('Date is required.');return}
   let o={id:newId(orders),date,customerId:custId,type:otype,note:document.getElementById('o-note').value};
   if(otype==='stock'){
     const lines=[...document.querySelectorAll('#stock-lines .order-line')];
@@ -1000,16 +1103,19 @@ async function saveOrder(){
     if(!items.length){alert('상품을 선택해주세요.');return}
     for(const item of items){const p=getP(item.pid);if(p&&Number(p.stock)<item.qty){alert(`${p.name}: 재고 부족 (현재: ${p.stock})`);return}}
     const totalCharge=items.reduce((s,i)=>s+i.qty*i.unit,0);
+    const totalCost=items.reduce((s,i)=>{const p=getP(i.pid);return s+i.qty*(Number(p?.costPrice)||0);},0);
     const desc=items.map(i=>{const p=getP(i.pid);return p?(i.qty>1?`${p.name}×${i.qty}`:p.name):''}).filter(Boolean).join(', ');
-    o={...o,productId:items[0].pid,qty:items.reduce((s,i)=>s+i.qty,0),cost:0,shippingCost:0,
+    o={...o,productId:items[0].pid,qty:items.reduce((s,i)=>s+i.qty,0),cost:totalCost,
+       shippingCost:Number(document.getElementById('o-ship-stock').value)||0,
        charge:totalCharge,platform:'',receiptNo:'',
-       desc,payment:document.getElementById('o-payment').value,proxyStatus:'done',url:''};
+       desc,payment:document.getElementById('o-payment').value,proxyStatus:'done',url:'',
+       items:items.map(i=>({pid:i.pid,qty:i.qty}))};
     for(const item of items){
       const p=getP(item.pid);
       if(p){p.stock=Number(p.stock)-item.qty;LS.set('products',products);await updateRow('Products',item.pid,{stock:p.stock})}
-      const io={id:newId(inouts),date,productId:item.pid,type:'out',qty:item.qty,note:'Sale'};
+      const io={id:newId(inouts),date,productId:item.pid,type:'out',qty:item.qty,note:'Sale',orderId:o.id};
       inouts.push(io);LS.set('inouts',inouts);
-      await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note});
+      await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note,orderId:o.id});
     }
   }else{
     const lines=[...document.querySelectorAll('#proxy-lines .order-line')];
@@ -1027,19 +1133,12 @@ async function saveOrder(){
        payment:document.getElementById('o-payment').value,
        proxyStatus:document.getElementById('o-proxy-status').value};
   }
-  if(o.payment==='credit'){
-    const c=getC(custId);
-    if(c){
-      c.outstanding=(Number(c.outstanding)||0)+Number(o.charge);
-      LS.set('customers',customers);
-      await updateRow('Customers',custId,{outstanding:c.outstanding});
-    }
-  }
   orders.push(o);LS.set('orders',orders);
+  if(o.payment==='credit')await recalcCustomerOutstanding(custId);
   await pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId||'',
     qty:o.qty,cost:o.cost,shippingCost:o.shippingCost||0,charge:o.charge,platform:o.platform||'',
     receiptNo:o.receiptNo||'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:o.url||''});
-  closeModal('modal-order');toast('✓ Order saved');renderDash();
+  closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();
 }
 
 /* ── PRODUCT ───────────────────────────────────────────────────────────── */
@@ -1047,13 +1146,14 @@ async function saveProduct(){
   const name=document.getElementById('p-name').value.trim();
   if(!name){alert('Enter product name.');return}
   const p={id:newId(products),name,cat:document.getElementById('p-cat').value,
+    costPrice:Number(document.getElementById('p-cost').value)||0,
     price:Number(document.getElementById('p-price').value),
     stock:Number(document.getElementById('p-stock').value),
     minStock:Number(document.getElementById('p-min').value),
     note:document.getElementById('p-note').value};
   products.push(p);LS.set('products',products);
-  await pushRow('Products',{id:p.id,name:p.name,cat:p.cat,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
-  closeModal('modal-product');toast('✓ Product added');renderInventory();
+  await pushRow('Products',{id:p.id,name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
+  closeModal('modal-product');toast('✓ Product added');renderInventory();renderDash();
 }
 
 /* ── INOUT ─────────────────────────────────────────────────────────────── */
@@ -1061,8 +1161,10 @@ async function saveInout(){
   const pid=document.getElementById('io-product').value;
   if(!pid){alert('Select a product.');return}
   const qty=Number(document.getElementById('io-qty').value);
+  if(!qty||qty<=0){alert('Quantity must be greater than 0.');return}
   const type=document.getElementById('io-type').value;
   const date=document.getElementById('io-date').value;
+  if(!date){alert('Date is required.');return}
   const p=getP(pid);
   if(p){
     if(type==='in')p.stock=Number(p.stock)+qty;
@@ -1074,7 +1176,59 @@ async function saveInout(){
   const io={id:newId(inouts),date,productId:pid,type,qty,note:document.getElementById('io-note').value};
   inouts.push(io);LS.set('inouts',inouts);
   await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note});
-  closeModal('modal-inout');toast('✓ Movement saved');renderInventory();
+  closeModal('modal-inout');toast('✓ Movement saved');renderInventory();renderDash();
+}
+async function deleteInout(id){
+  if(!confirm('Delete this movement?'))return;
+  const io=inouts.find(x=>x.id==id);
+  if(io){
+    const p=getP(io.productId);
+    if(p){
+      if(io.type==='in')p.stock=Math.max(0,Number(p.stock)-Number(io.qty));
+      else if(io.type==='out')p.stock=Number(p.stock)+Number(io.qty);
+      LS.set('products',products);
+      await updateRow('Products',io.productId,{stock:p.stock});
+    }
+  }
+  inouts=inouts.filter(x=>x.id!=id);
+  LS.set('inouts',inouts);
+  markDeleted('StockMovements',id);
+  await deleteRow('StockMovements',id);
+  toast('Deleted');renderInventory();renderDash();
+}
+function openEditInout(id){
+  const io=inouts.find(x=>x.id==id);if(!io)return;
+  const p=getP(io.productId);
+  document.getElementById('eio-date').value=io.date||'';
+  document.getElementById('eio-product-name').value=p?p.name:'(deleted)';
+  document.getElementById('eio-type').value=io.type||'in';
+  document.getElementById('eio-qty').value=io.qty||1;
+  document.getElementById('eio-note').value=io.note||'';
+  document.getElementById('modal-edit-inout').dataset.editId=id;
+  document.getElementById('overlay-edit-inout').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
+async function saveEditInout(){
+  const id=Number(document.getElementById('modal-edit-inout').dataset.editId);
+  const io=inouts.find(x=>x.id==id);if(!io)return;
+  const oldType=io.type,oldQty=Number(io.qty);
+  const newType=document.getElementById('eio-type').value;
+  const newQty=Number(document.getElementById('eio-qty').value)||1;
+  const p=getP(io.productId);
+  if(p){
+    if(oldType==='in')p.stock=Math.max(0,Number(p.stock)-oldQty);
+    else if(oldType==='out')p.stock=Number(p.stock)+oldQty;
+    if(newType==='in')p.stock=Number(p.stock)+newQty;
+    else if(newType==='out')p.stock=Math.max(0,Number(p.stock)-newQty);
+    else p.stock=newQty;
+    LS.set('products',products);
+    await updateRow('Products',io.productId,{stock:p.stock});
+  }
+  io.date=document.getElementById('eio-date').value;
+  io.type=newType;io.qty=newQty;io.note=document.getElementById('eio-note').value;
+  LS.set('inouts',inouts);
+  await updateRow('StockMovements',id,{date:io.date,type:io.type,qty:io.qty,note:io.note});
+  closeModal('modal-edit-inout');toast('✓ Updated');renderInventory();renderDash();
 }
 
 /* ── CUSTOMER ──────────────────────────────────────────────────────────── */
@@ -1091,7 +1245,7 @@ async function saveCustomer(){
     c.payment=document.getElementById('c-payment').value;c.note=document.getElementById('c-note').value;
     LS.set('customers',customers);
     await updateRow('Customers',c.id,{name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note});
-    closeModal('modal-customer');toast('✓ Customer updated');renderCustomers('');
+    closeModal('modal-customer');toast('✓ Customer updated');renderCustomers('');renderDash();renderInvoices();
   } else {
     const c={id:newId(customers),name,
       contact:document.getElementById('c-contact').value,
@@ -1106,7 +1260,7 @@ async function saveCustomer(){
     customers.push(c);LS.set('customers',customers);
     await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
       type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
-    closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');
+    closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');renderDash();renderInvoices();
   }
 }
 
@@ -1118,9 +1272,10 @@ async function saveEvent(){
   const timeToggle=document.getElementById('ev-time-toggle');
   const evTime=timeToggle.checked?document.getElementById('ev-time').value:'';
   const dateEnd=document.getElementById('ev-date-end').value||date;
-  const ev={id:newId(events),date,dateEnd:dateEnd>=date?dateEnd:date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime};
+  const recur=document.getElementById('ev-recur').value;
+  const ev={id:newId(events),date,dateEnd:dateEnd>=date?dateEnd:date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime,recur};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.dateEnd,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time});
+  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.dateEnd,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time,recur:ev.recur});
   closeModal('modal-event');toast('✓ Event added');renderCalendar();
 }
 
@@ -1132,7 +1287,7 @@ async function saveExpense(){
   const exp={id:newId(expenses),date,type:document.getElementById('exp-type').value,amount,note:document.getElementById('exp-note').value};
   expenses.push(exp);LS.set('expenses',expenses);
   await pushRow('Expenses',{id:exp.id,date:exp.date,type:exp.type,amount:exp.amount,note:exp.note});
-  closeModal('modal-expense');toast('✓ Expense saved');renderFinance();
+  closeModal('modal-expense');toast('✓ Expense saved');renderFinance();renderDash();
 }
 
 /* ── SETTLE / DELETE ───────────────────────────────────────────────────── */
@@ -1251,23 +1406,80 @@ async function saveEditOrder(){
   o.note=document.getElementById('eo-note').value;
   /* adjust outstanding — handle customer change */
   if(oldCustId!=newCustId){
-    const oldC=getC(oldCustId);
-    if(oldC&&oldPayment==='credit'){oldC.outstanding=(Number(oldC.outstanding)||0)-oldCharge;LS.set('customers',customers);await updateRow('Customers',oldC.id,{outstanding:oldC.outstanding});}
-    const newC=getC(newCustId);
-    if(newC&&newPayment==='credit'){newC.outstanding=(Number(newC.outstanding)||0)+newCharge;LS.set('customers',customers);await updateRow('Customers',newC.id,{outstanding:newC.outstanding});}
-  } else {
-    const c=getC(o.customerId);
-    if(c){let adj=0;if(oldPayment==='credit')adj-=oldCharge;if(newPayment==='credit')adj+=newCharge;if(adj!==0){c.outstanding=(Number(c.outstanding)||0)+adj;LS.set('customers',customers);await updateRow('Customers',c.id,{outstanding:c.outstanding});}}
+    if(oldPayment==='credit')await recalcCustomerOutstanding(oldCustId);
+    if(newPayment==='credit')await recalcCustomerOutstanding(newCustId);
+  }else if(oldPayment==='credit'||newPayment==='credit'){
+    await recalcCustomerOutstanding(o.customerId);
   }
   LS.set('orders',orders);
   await updateRow('Orders',id,{date:o.date,customerId:o.customerId,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
-  closeModal('modal-edit-order');toast('✓ Order updated');renderOrders();renderDash();
+  closeModal('modal-edit-order');toast('✓ Order updated');renderDash();renderOrders();renderInvoices();renderCalendar();
 }
-async function deleteOrder(id){if(!confirm('Delete this order?'))return;orders=orders.filter(o=>o.id!=id);LS.set('orders',orders);await deleteRow('Orders',id);toast('Deleted');renderOrders()}
-async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);await deleteRow('Products',id);toast('Deleted');renderInventory()}
-async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);await deleteRow('Customers',id);toast('Deleted');renderCustomers('')}
-async function deleteEvent(id){events=events.filter(e=>e.id!=id);LS.set('events',events);await deleteRow('Events',id);toast('Deleted');renderCalendar()}
-async function deleteExpense(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!=id);LS.set('expenses',expenses);await deleteRow('Expenses',id);toast('Deleted');renderFinance()}
+async function deleteOrder(id){
+  if(!confirm('Delete this order?'))return;
+  const o=orders.find(x=>x.id==id);
+  orders=orders.filter(x=>x.id!=id);LS.set('orders',orders);
+  /* ── outstanding 재계산 ── */
+  if(o&&o.payment==='credit')await recalcCustomerOutstanding(o.customerId);
+  /* ── 재고 복원 + inout 삭제 (stock 주문만) ── */
+  if(o&&o.type==='stock'){
+    const ioItems=o.items||[{pid:o.productId,qty:o.qty}];
+    const removedIoIds=[];
+    for(const item of ioItems){
+      /* orderId 연결된 기록 우선, 없으면 날짜+상품+타입으로 매칭 (중복 방지) */
+      const idx=inouts.findIndex(io=>{
+        if(removedIoIds.includes(io.id))return false;
+        const oid=String(io.orderId==null||io.orderId===undefined?'':io.orderId).trim();
+        const tid=String(id).trim();
+        if(oid&&oid!=='null'&&oid!=='undefined'&&oid===tid)return true;
+        const noOid=!oid||oid==='null'||oid==='undefined';
+        return noOid&&io.date===o.date&&String(io.productId).trim()===String(item.pid).trim()&&(io.type||'').trim()==='out'&&(io.note||'').trim()==='Sale'&&Number(io.qty)===Number(item.qty);
+      });
+      if(idx>=0){
+        removedIoIds.push(inouts[idx].id);
+        const p=getP(item.pid);
+        if(p){p.stock=Number(p.stock)+Number(item.qty);LS.set('products',products);await updateRow('Products',item.pid,{stock:p.stock});}
+      }
+    }
+    if(removedIoIds.length){
+      inouts=inouts.filter(io=>!removedIoIds.includes(io.id));
+      LS.set('inouts',inouts);
+      for(const ioId of removedIoIds){markDeleted('StockMovements',ioId);await deleteRow('StockMovements',ioId);}
+    }
+  }
+  markDeleted('Orders',id);await deleteRow('Orders',id);toast('Deleted');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
+}
+async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);markDeleted('Products',id);await deleteRow('Products',id);toast('Deleted');renderInventory();renderDash();}
+async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);markDeleted('Customers',id);await deleteRow('Customers',id);toast('Deleted');renderCustomers('');renderDash();renderInvoices();}
+async function deleteEvent(id){
+  const ev=events.find(e=>e.id==id);
+  if(ev&&ev.recur&&ev.recur!=='none'){
+    if(!confirm('반복 일정 전체를 삭제합니다.\nThis will delete all occurrences. Continue?'))return;
+  }
+  events=events.filter(e=>e.id!=id);LS.set('events',events);markDeleted('Events',id);await deleteRow('Events',id);toast('Deleted');renderCalendar();
+}
+async function deleteExpense(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!=id);LS.set('expenses',expenses);markDeleted('Expenses',id);await deleteRow('Expenses',id);toast('Deleted');renderFinance();renderDash();}
+
+/* ── outstanding 재계산 (scratch) ────────────────────────────────────────── */
+async function recalcCustomerOutstanding(cid){
+  const c=getC(cid);if(!c)return;
+  const creditOrds=orders.filter(o=>String(o.customerId)===String(cid)&&o.payment==='credit');
+  const months=[...new Set([
+    ...creditOrds.map(o=>o.date?o.date.slice(0,7):null).filter(Boolean),
+    ...Object.keys(invExtras).filter(k=>k.startsWith(String(cid)+'-')).map(k=>k.slice(String(cid).length+1))
+  ])];
+  let total=0;
+  for(const month of months){
+    const key=`${cid}-${month}`;
+    if(settlements[key])continue;
+    total+=creditOrds.filter(o=>o.date&&o.date.startsWith(month)).reduce((s,o)=>s+Number(o.charge),0);
+    total+=invExtras[key]||0;
+  }
+  c.outstanding=Math.max(0,total);
+  LS.set('customers',customers);
+  await updateRow('Customers',cid,{outstanding:c.outstanding});
+}
+
 async function toggleProxy(id){const o=orders.find(x=>x.id==id);if(!o)return;o.proxyStatus=o.proxyStatus==='done'?'pending':'done';LS.set('orders',orders);await updateRow('Orders',id,{proxyStatus:o.proxyStatus});toast(o.proxyStatus==='done'?'✓ Done':'Marked pending');renderOrders();renderDash()}
 
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
@@ -1280,10 +1492,10 @@ function renderDash(){
   const moCost=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
   const profit=rev-moCost-moExp;
   document.getElementById('dash-stats').innerHTML=
-    `<div class="stat"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(rev)}</div></div>`+
-    `<div class="stat"><div class="sk">Net Profit</div><div class="se">순이익 (비용 차감)</div><div class="sv ${profit>=0?'green':'red'}">${won(profit)}</div></div>`+
-    `<div class="stat"><div class="sk">Proxy Orders</div><div class="se">구매대행 ${pc}건</div><div class="sv purple">${pc}건 / ${mo.length}건</div></div>`+
-    `<div class="stat"><div class="sk">Outstanding</div><div class="se">전체 미수금</div><div class="sv ${out>0?'amber':''}">${won(out)}</div></div>`;
+    `<div class="stat" onclick="detDashRev()"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(rev)}</div></div>`+
+    `<div class="stat" onclick="detDashProfit()"><div class="sk">Net Profit</div><div class="se">순이익 (비용 차감)</div><div class="sv ${profit>=0?'green':'red'}">${won(profit)}</div></div>`+
+    `<div class="stat" onclick="detDashProxy()"><div class="sk">Proxy Orders</div><div class="se">구매대행 ${pc}건</div><div class="sv purple">${pc}건 / ${mo.length}건</div></div>`+
+    `<div class="stat" onclick="detDashOut()"><div class="sk">Outstanding</div><div class="se">전체 미수금</div><div class="sv ${out>0?'amber':''}">${won(out)}</div></div>`;
   document.getElementById('dash-billing').innerHTML=customers.map(c=>{
     const amt=mo.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
     if(!amt&&!c.outstanding)return'';
@@ -1302,23 +1514,23 @@ function renderDash(){
 function renderInventory(){
   const ts=products.reduce((s,p)=>s+Number(p.stock),0);
   const lc=products.filter(p=>Number(p.stock)<=Number(p.minStock)).length;
-  const tv=products.reduce((s,p)=>s+Number(p.stock)*Number(p.price),0);
+  const tv=products.reduce((s,p)=>s+Number(p.stock)*Number(p.costPrice||0),0);
   document.getElementById('inv-stats').innerHTML=
-    `<div class="stat"><div class="sk">Total SKUs</div><div class="se">상품 종류</div><div class="sv">${products.length}</div></div>`+
-    `<div class="stat"><div class="sk">Total Units</div><div class="se">총 재고</div><div class="sv blue">${ts}</div></div>`+
-    `<div class="stat"><div class="sk">Low Stock</div><div class="se">부족 상품</div><div class="sv ${lc>0?'red':''}">${lc}</div></div>`+
-    `<div class="stat"><div class="sk">Inventory Value</div><div class="se">재고 자산</div><div class="sv green">${won(tv)}</div></div>`;
+    `<div class="stat" onclick="detInv('sku')"><div class="sk">Total SKUs</div><div class="se">상품 종류</div><div class="sv">${products.length}</div></div>`+
+    `<div class="stat" onclick="detInv('units')"><div class="sk">Total Units</div><div class="se">총 재고</div><div class="sv blue">${ts}</div></div>`+
+    `<div class="stat" onclick="detInv('low')"><div class="sk">Low Stock</div><div class="se">부족 상품</div><div class="sv ${lc>0?'red':''}">${lc}</div></div>`+
+    `<div class="stat" onclick="detInv('value')"><div class="sk">Inventory Value</div><div class="se">재고 자산</div><div class="sv green">${won(tv)}</div></div>`;
   document.getElementById('product-table').innerHTML=products.length?products.map(p=>{
     const pct=Math.min(100,Math.round(Number(p.stock)/(Number(p.minStock)*4||20)*100));
     const col=p.stock==0?'var(--red)':Number(p.stock)<=Number(p.minStock)?'var(--amber)':'var(--green)';
-    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td><div class="stock-bar-w"><div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${col}"></div></div><div class="stock-pct">${pct}%</div></div></td><td><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
-  }).join(''):'<tr><td colspan="6" class="empty">No products yet</td></tr>';
+    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td><div class="stock-bar-w"><div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${col}"></div></div><div class="stock-pct">${pct}%</div></div></td><td><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty">No products yet</td></tr>';
   const tMap={in:'<span class="badge bg-green"><span class="bk">In</span><span class="be">입고</span></span>',out:'<span class="badge bg-blue"><span class="bk">Out</span><span class="be">출고</span></span>',adjust:'<span class="badge bg-gray"><span class="bk">Adjust</span><span class="be">조정</span></span>'};
   const recent=[...inouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
   document.getElementById('inout-table').innerHTML=recent.length?recent.map(io=>{
     const p=getP(io.productId);
-    return`<tr><td class="mono">${io.date}</td><td>${p?p.name:'(deleted)'}</td><td>${tMap[io.type]||io.type}</td><td class="mono">${io.qty}</td><td style="color:var(--text2)">${io.note}</td></tr>`;
-  }).join(''):'<tr><td colspan="5" class="empty">No movements yet</td></tr>';
+    return`<tr><td class="mono">${io.date}</td><td>${p?p.name:'(deleted)'}</td><td>${tMap[io.type]||io.type}</td><td class="mono">${io.qty}</td><td style="color:var(--text2)">${io.note}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditInout(${io.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteInout(${io.id})">Del</button></td></tr>`;
+  }).join(''):'<tr><td colspan="6" class="empty">No movements yet</td></tr>';
 }
 
 /* ── RENDER: SALES ─────────────────────────────────────────────────────── */
@@ -1339,10 +1551,10 @@ function renderOrders(){
   const cost=filtered.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
   const pp=filtered.filter(o=>o.type==='proxy'&&o.proxyStatus==='pending').length;
   document.getElementById('sales-stats').innerHTML=
-    `<div class="stat"><div class="sk">Total Billed</div><div class="se">청구액 합계</div><div class="sv green">${won(rev)}</div></div>`+
-    `<div class="stat"><div class="sk">Total Cost</div><div class="se">원가 합계</div><div class="sv">${won(cost)}</div></div>`+
-    `<div class="stat"><div class="sk">Gross Profit</div><div class="se">총 이익</div><div class="sv ${rev-cost>=0?'green':'red'}">${won(rev-cost)}</div></div>`+
-    `<div class="stat"><div class="sk">Pending Proxy</div><div class="se">대행 미처리</div><div class="sv ${pp>0?'amber':''}">${pp}</div></div>`;
+    `<div class="stat" onclick="detSales('billed')"><div class="sk">Total Billed</div><div class="se">청구액 합계</div><div class="sv green">${won(rev)}</div></div>`+
+    `<div class="stat" onclick="detSales('cost')"><div class="sk">Total Cost</div><div class="se">원가 합계</div><div class="sv">${won(cost)}</div></div>`+
+    `<div class="stat" onclick="detSales('profit')"><div class="sk">Gross Profit</div><div class="se">총 이익</div><div class="sv ${rev-cost>=0?'green':'red'}">${won(rev-cost)}</div></div>`+
+    `<div class="stat" onclick="detSales('proxy')"><div class="sk">Pending Proxy</div><div class="se">대행 미처리</div><div class="sv ${pp>0?'amber':''}">${pp}</div></div>`;
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
@@ -1374,10 +1586,10 @@ function renderFinance(){
   const net=gross-shipping-expTotal;
 
   document.getElementById('fin-stats').innerHTML=
-    `<div class="stat"><div class="sk">Revenue</div><div class="se">매출 (청구 합계)</div><div class="sv green">${won(revenue)}</div></div>`+
-    `<div class="stat"><div class="sk">Total Cost</div><div class="se">원가 + 배송비</div><div class="sv">${won(cogs+shipping)}</div></div>`+
-    `<div class="stat"><div class="sk">Expenses</div><div class="se">사업 경비</div><div class="sv amber">${won(expTotal)}</div></div>`+
-    `<div class="stat"><div class="sk">Net Profit</div><div class="se">순이익</div><div class="sv ${net>=0?'green':'red'}">${won(net)}</div></div>`;
+    `<div class="stat" onclick="detFin('rev')"><div class="sk">Revenue</div><div class="se">매출 (청구 합계)</div><div class="sv green">${won(revenue)}</div></div>`+
+    `<div class="stat" onclick="detFin('cost')"><div class="sk">Total Cost</div><div class="se">원가 + 배송비</div><div class="sv">${won(cogs+shipping)}</div></div>`+
+    `<div class="stat" onclick="detFin('exp')"><div class="sk">Expenses</div><div class="se">사업 경비</div><div class="sv amber">${won(expTotal)}</div></div>`+
+    `<div class="stat" onclick="detFin('profit')"><div class="sk">Net Profit</div><div class="se">순이익</div><div class="sv ${net>=0?'green':'red'}">${won(net)}</div></div>`;
 
   document.getElementById('fin-pnl').innerHTML=
     `<div class="fin-row"><span>💰 Revenue (Sales)</span><span class="mono">${won(revenue)}</span></div>`+
@@ -1431,28 +1643,31 @@ function renderInvoices(){
   const totalRev=mo.reduce((s,o)=>s+Number(o.charge),0);
   const creditOut=customers.reduce((s,c)=>s+Number(c.outstanding||0),0);
   const pending=mo.filter(o=>o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
-  document.getElementById('inv-stats').innerHTML=
-    `<div class="stat"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(totalRev)}</div></div>`+
-    `<div class="stat"><div class="sk">Invoiced Customers</div><div class="se">청구 고객 수</div><div class="sv blue">${new Set(mo.map(o=>o.customerId)).size}명</div></div>`+
-    `<div class="stat"><div class="sk">On Credit</div><div class="se">외상 청구액</div><div class="sv amber">${won(pending)}</div></div>`+
-    `<div class="stat"><div class="sk">Total Outstanding</div><div class="se">전체 미수금</div><div class="sv ${creditOut>0?'red':''}">${won(creditOut)}</div></div>`;
+  document.getElementById('invtab-stats').innerHTML=
+    `<div class="stat" onclick="detInvTab('rev')"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(totalRev)}</div></div>`+
+    `<div class="stat" onclick="detInvTab('cust')"><div class="sk">Invoiced Customers</div><div class="se">청구 고객 수</div><div class="sv blue">${new Set(mo.map(o=>o.customerId)).size}명</div></div>`+
+    `<div class="stat" onclick="detInvTab('credit')"><div class="sk">On Credit</div><div class="se">외상 청구액</div><div class="sv amber">${won(pending)}</div></div>`+
+    `<div class="stat" onclick="detInvTab('out')"><div class="sk">Total Outstanding</div><div class="se">전체 미수금</div><div class="sv ${creditOut>0?'red':''}">${won(creditOut)}</div></div>`;
   const cards=customers.map(c=>{
     const cOrders=mo.filter(o=>o.customerId==c.id);
     const total=cOrders.reduce((s,o)=>s+Number(o.charge),0);
     if(!cOrders.length)return'';
-    const isOut=Number(c.outstanding)>0;
+    const key=`${c.id}-${month}`;
+    const isSettled=!!settlements[key];
+    const extraAmt=invExtras[key]||0;
+    const grandAmt=total+cOrders.reduce((s,o)=>s+Number(o.shippingCost||0),0)+extraAmt;
     return`<div class="inv-card" onclick="openInvoiceModal(${c.id})" style="cursor:pointer">
       <div class="inv-head">
         <div style="flex:1">
           <div class="inv-name">${c.name}</div>
           <div class="inv-meta">${cOrders.length} order${cOrders.length>1?'s':''} · ${c.contact||''}</div>
         </div>
-        <div style="text-align:right;margin-right:14px">
-          <div class="inv-amt ${isOut?'':'green'}">${won(total)}</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:2px">${isOut?`Outstanding ${won(c.outstanding)}`:'Settled ✓'}</div>
+        <div style="text-align:right;margin-right:10px">
+          <div class="inv-amt ${isSettled?'green':''}">${won(grandAmt)}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:2px">${isSettled?'정산완료 ✓':(Number(c.outstanding)>0?`미수금 ${won(c.outstanding)}`:'')}</div>
         </div>
-        ${isOut?'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>':'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>'}
-        <span style="font-size:18px;color:var(--text3);margin-left:10px">›</span>
+        <button class="btn btn-xs ${isSettled?'':'btn-p'}" style="white-space:nowrap;margin-right:8px" onclick="toggleSettled(${c.id},'${month}',event)">${isSettled?'↩ 정산취소':'✓ 정산완료'}</button>
+        <span style="font-size:18px;color:var(--text3)">›</span>
       </div>
     </div>`;
   }).join('');
@@ -1467,6 +1682,10 @@ function openInvoiceModal(cid){
   const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const invNo=`INV-${month.replace('-','')}-${String(cid).padStart(3,'0')}`;
   const subtotal=cOrders.reduce((s,o)=>s+Number(o.charge),0);
+  const totalShipping=cOrders.reduce((s,o)=>s+Number(o.shippingCost||0),0);
+  const extraKey=`${cid}-${month}`;
+  const extraCharge=invExtras[extraKey]||0;
+  const grandTotal=subtotal+totalShipping+extraCharge;
   const isOut=Number(c.outstanding)>0;
   const payLabel={credit:'On Credit / 외상',cash:'Cash / 현금',transfer:'Bank Transfer / 계좌이체',mixed:'Mixed / 혼합'};
   const itemRows=cOrders.length?cOrders.map((o,i)=>`
@@ -1505,7 +1724,7 @@ function openInvoiceModal(cid){
           ${c.sns||''}
         </div>
       </div>
-      <div class="idoc-stamp ${isOut?'due':'paid'}">${isOut?'미\n정산':'정산\n완료'}</div>
+      <div class="idoc-stamp ${settlements[extraKey]?'paid':isOut?'due':'paid'}">${settlements[extraKey]?'정산\n완료':isOut?'미\n정산':'정산\n완료'}</div>
     </div>
     <table class="idoc-table">
       <thead><tr><th style="width:32px">#</th><th>Description / 상품명</th><th style="text-align:center;width:50px">Qty</th><th class="r" style="width:120px">Amount</th></tr></thead>
@@ -1513,11 +1732,13 @@ function openInvoiceModal(cid){
     </table>
     <div class="idoc-totals">
       <div class="idoc-trow"><span>Subtotal / 소계</span><span id="idoc-sub" style="font-family:'DM Mono',monospace">${won(subtotal)}</span></div>
-      <div class="idoc-trow">
-        <span>Shipping / 배송비</span>
-        <input type="number" id="idoc-ship" value="0" min="0" placeholder="0원" oninput="calcInvTotal(${subtotal})">
+      ${totalShipping>0?`<div class="idoc-trow"><span>Shipping / 배송비</span><span style="font-family:'DM Mono',monospace">${won(totalShipping)}</span></div>`:''}
+      <div class="idoc-trow" style="gap:6px">
+        <span style="white-space:nowrap;flex-shrink:0">기타 추가금액 / Extra</span>
+        <input type="number" id="idoc-extra" value="${extraCharge}" min="0" placeholder="0원" style="flex:1;min-width:70px" oninput="calcInvTotal(${subtotal+totalShipping})">
+        <button class="btn btn-xs btn-p" style="white-space:nowrap" onclick="saveInvoiceExtra(${cid},'${month}',${subtotal+totalShipping})">저장</button>
       </div>
-      <div class="idoc-trow"><span>Total / 합계</span><span id="idoc-total" style="font-family:'DM Mono',monospace;color:#C8521A">${won(subtotal)}</span></div>
+      <div class="idoc-trow"><span>Total / 합계</span><span id="idoc-total" style="font-family:'DM Mono',monospace;color:#C8521A">${won(grandTotal)}</span></div>
     </div>
     <div class="idoc-foot">
       <div>
@@ -1533,10 +1754,36 @@ function openInvoiceModal(cid){
   document.body.style.overflow='hidden';
   document.documentElement.style.overflow='hidden';
 }
-function calcInvTotal(sub){
-  const ship=Number(document.getElementById('idoc-ship')?.value||0);
+function calcInvTotal(base){
+  const extra=Number(document.getElementById('idoc-extra')?.value||0);
   const el=document.getElementById('idoc-total');
-  if(el)el.textContent=won(sub+ship);
+  if(el)el.textContent=won(base+extra);
+}
+async function saveInvoiceExtra(cid,month,base){
+  const newExtra=Number(document.getElementById('idoc-extra')?.value)||0;
+  const key=`${cid}-${month}`;
+  const oldExtra=invExtras[key]||0;
+  const diff=newExtra-oldExtra;
+  invExtras[key]=newExtra;
+  LS.set('invExtras',invExtras);
+  if(diff!==0)await recalcCustomerOutstanding(cid);
+  calcInvTotal(base);
+  toast('✓ 추가금액 저장됨');
+  renderInvoices();
+}
+async function toggleSettled(cid,month,e){
+  e.stopPropagation();
+  const key=`${cid}-${month}`;
+  const wasSettled=!!settlements[key];
+  const mo=orders.filter(o=>o.customerId==cid&&o.date&&o.date.startsWith(month));
+  const creditTotal=mo.filter(o=>o.payment==='credit').reduce((s,o)=>s+Number(o.charge)+(Number(o.shippingCost)||0),0)+(invExtras[key]||0);
+  if(!getC(cid))return;
+  if(wasSettled)settlements[key]=false;
+  else settlements[key]=true;
+  LS.set('settlements',settlements);
+  await recalcCustomerOutstanding(cid);
+  toast(wasSettled?'↩ 정산 취소됨':'✓ 정산 완료');
+  renderInvoices();
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
@@ -1692,7 +1939,7 @@ function renderCalendar(){
   const first=new Date(calYear,calMonth,1).getDay(),last=new Date(calYear,calMonth+1,0).getDate(),today=new Date();
   const ym=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const ymFirst=ym+'-01',ymLast=ym+'-31';
-  const mevs=events.filter(e=>{if(!e.date)return false;const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return e.date<=ymLast&&end>=ymFirst;});
+  const mevs=expandEventsForMonth(ym);
   const mords=orders.filter(o=>o.date&&o.date.startsWith(ym));
   let html='';
   for(let i=0;i<first;i++){const d=new Date(calYear,calMonth,0-first+i+1).getDate();html+=`<div class="cal-day other-mo"><span class="cal-day-num">${d}</span></div>`}
@@ -1715,7 +1962,8 @@ function renderCalendar(){
     evH+=devs.map(e=>{
       const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;
       const isStart=ds===e.date,isEnd=ds===end,isMid=!isStart&&!isEnd;
-      return `<div class="cal-ev ev-${e.type}"${isMid?' style="opacity:.4"':''}>${e.time&&isStart?e.time+' ':''}${e.en||e.ko}</div>`;
+      const ri=e.recur&&e.recur!=='none'?' ↺':'';
+      return `<div class="cal-ev ev-${e.type}"${isMid?' style="opacity:.4"':''}>${e.time&&isStart?e.time+' ':''}${e.en||e.ko}${isStart?ri:''}</div>`;
     }).join('');
     if(dords.length)evH+=`<div class="cal-ev ev-order">${dords.length} order${dords.length>1?'s':''}</div>`;
     const cls=['cal-day',isT?'today':'',isSun?'is-sunday':'',holiday?'is-holiday':'',isSel?'cal-day-sel':''].filter(Boolean).join(' ');
@@ -1733,17 +1981,21 @@ function renderCalendar(){
     if(sdH)dH+=`<div class="ev-item"><div class="ev-dot" style="background:#c0392b"></div><div><div class="ev-ik">${sdH}</div><div class="ev-ie">공휴일 · Public Holiday</div></div></div>`;
     sdA.forEach(a=>dH+=`<div class="ev-item"><div class="ev-dot" style="background:${a.hi?'#ff6d00':'#a0632a'}"></div><div><div class="ev-ik">${a.labelEn}</div><div class="ev-ie">${a.labelKo}${a.isStart?' — 시작':a.isEnd?' — 마감':''}</div></div></div>`);
     const dc2={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
-    sdEvs.forEach(e=>dH+=`<div class="ev-item"><div class="ev-dot" style="background:${dc2[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`);
+    const recurLbl={daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년'};
+    sdEvs.forEach(e=>{const rl=e.recur&&e.recur!=='none'?' · ↺ '+recurLbl[e.recur]:'';dH+=`<div class="ev-item"><div class="ev-dot" style="background:${dc2[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}${e.time?' · '+e.time:''}${rl}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`;});
     if(sdOrds.length)dH+=`<div class="ev-item"><div class="ev-dot" style="background:var(--purple)"></div><div><div class="ev-ik">${sdOrds.length} order${sdOrds.length>1?'s':''}</div><div class="ev-ie">${sdOrds.map(o=>{const c=customers.find(x=>x.id==o.customerId);return c?c.name:'?'}).join(', ')}</div></div></div>`;
     if(!sdH&&!sdA.length&&!sdEvs.length&&!sdOrds.length)dH+='<div class="empty">No events / 일정 없음</div>';
     det.innerHTML=dH;det.style.display='block';
   } else {det.style.display='none';}
   /* event list */
   const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
-  const userEvs=mevs.filter(e=>e.date.startsWith(ym)||(e.dateEnd&&e.dateEnd.startsWith(ym)));
+  const recurLblList={daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년'};
+  const seenIds=new Set();
+  const userEvs=mevs.filter(e=>{if(seenIds.has(e.id))return false;seenIds.add(e.id);return true;});
   document.getElementById('event-list').innerHTML=userEvs.length?[...userEvs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{
     const dateRange=e.dateEnd&&e.dateEnd!==e.date?e.date+' ~ '+e.dateEnd:e.date;
-    return `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${dateRange}${e.time?' · '+e.time:''}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`;
+    const rb=e.recur&&e.recur!=='none'?' · ↺ '+recurLblList[e.recur]:'';
+    return `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${dateRange}${e.time?' · '+e.time:''}${rb}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`;
   }).join(''):'<div class="empty">No events this month</div>';
   /* important admin deadlines this month */
   const mStr=String(calMonth+1).padStart(2,'0');
@@ -1757,6 +2009,110 @@ function renderCalendar(){
   document.getElementById('billing-queue').innerHTML=bqItems.map(({c,amt})=>
     `<div class="ev-item"><div class="ev-dot" style="background:var(--amber)"></div><div><div class="ev-ik">${c.name}</div><div class="ev-ie">This month: ${won(amt)}${c.outstanding>0?' · Total due: '+won(c.outstanding):''}</div></div><div class="mono" style="margin-left:auto;color:var(--amber)">${won(c.outstanding||amt)}</div></div>`
   ).join('')||'<div class="empty">No outstanding balances</div>';
+}
+
+/* ── STAT DETAIL DRILL-DOWN ────────────────────────────────────────────── */
+function showStatDetail(en,ko,html){
+  document.getElementById('sdd-en').textContent=en;
+  document.getElementById('sdd-ko').textContent=ko;
+  document.getElementById('sdd-body').innerHTML=html;
+  document.getElementById('overlay-stat-detail').classList.add('open');
+  document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
+function detDashRev(){
+  const mo=thisMO();
+  const rows=[...mo].sort((a,b)=>b.charge-a.charge).map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.charge)}</td></tr>`;}).join('');
+  showStatDetail('Monthly Revenue','이달 매출 상세',`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">Amount</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No orders</td></tr>'}</tbody></table>`);
+}
+function detDashProfit(){
+  const mo=thisMO();
+  const rev=mo.reduce((s,o)=>s+Number(o.charge),0);
+  const cost=mo.reduce((s,o)=>s+Number(o.cost||0),0);
+  const ship=mo.reduce((s,o)=>s+Number(o.shippingCost||0),0);
+  const exp=expenses.filter(e=>e.date&&e.date.startsWith(nowYM())).reduce((s,e)=>s+Number(e.amount),0);
+  const net=rev-cost-ship-exp;
+  showStatDetail('Net Profit','순이익 내역',`<div class="det-pnl"><div class="det-row"><span>매출 Revenue</span><span class="mono">${won(rev)}</span></div><div class="det-row"><span>원가 Cost of Goods</span><span class="mono">−${won(cost)}</span></div><div class="det-row"><span>배송비 Shipping</span><span class="mono">−${won(ship)}</span></div><div class="det-row"><span>경비 Expenses</span><span class="mono">−${won(exp)}</span></div><div class="det-row total"><span>순이익 Net Profit</span><span class="mono ${net>=0?'green':'red'}">${won(net)}</span></div></div>`);
+}
+function detDashProxy(){
+  const mo=thisMO().filter(o=>o.type==='proxy');
+  const rows=mo.map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;}).join('');
+  showStatDetail('Proxy Orders','구매대행 상세',`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">Charge</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan=5 class=empty>No proxy orders</td></tr>'}</tbody></table>`);
+}
+function detDashOut(){
+  const cs=customers.filter(c=>Number(c.outstanding)>0).sort((a,b)=>b.outstanding-a.outstanding);
+  const rows=cs.map(c=>`<tr><td>${c.name}</td><td>${c.contact||'—'}</td><td class="mono r">${won(c.outstanding)}</td></tr>`).join('');
+  showStatDetail('Outstanding Balance','미수금 고객 목록',`<table class="det-tbl"><thead><tr><th>Customer</th><th>Contact</th><th class="r">Outstanding</th></tr></thead><tbody>${rows||'<tr><td colspan=3 class=empty>No outstanding balances</td></tr>'}</tbody></table>`);
+}
+function detInv(type){
+  let list=products,title,titleKo;
+  if(type==='low'){list=products.filter(p=>Number(p.stock)<=Number(p.minStock));title='Low Stock Items';titleKo='재고 부족 상품';}
+  else if(type==='value'){list=[...products].sort((a,b)=>b.stock*(b.costPrice||0)-a.stock*(a.costPrice||0));title='Inventory Value';titleKo='재고 자산 상세';}
+  else if(type==='units'){list=[...products].sort((a,b)=>b.stock-a.stock);title='Stock Units';titleKo='재고 수량 상세';}
+  else{title='All Products';titleKo='전체 상품 목록';}
+  const rows=list.map(p=>{const v=Number(p.stock)*Number(p.costPrice||0);return`<tr><td>${p.name}</td><td class="mono r">${p.stock}</td><td class="mono r">${won(p.costPrice||0)}</td><td class="mono r">${won(p.price)}</td><td class="mono r">${won(v)}</td><td>${p.stock==0?'<span style="color:var(--red)">재고없음</span>':Number(p.stock)<=Number(p.minStock)?'<span style="color:var(--amber)">부족</span>':'<span style="color:var(--green)">정상</span>'}</td></tr>`;}).join('');
+  showStatDetail(title,titleKo,`<table class="det-tbl"><thead><tr><th>Product</th><th class="r">Stock</th><th class="r">원가</th><th class="r">판매가</th><th class="r">재고자산</th><th>Status</th></tr></thead><tbody>${rows||'<tr><td colspan=6 class=empty>No products</td></tr>'}</tbody></table>`);
+}
+function detSales(type){
+  const month=document.getElementById('month-filter')?.value||'';
+  const tf=document.getElementById('type-filter')?.value||'';
+  const filtered=orders.filter(o=>(!month||o.date.startsWith(month))&&(!tf||o.type===tf));
+  let list=filtered,title,titleKo;
+  if(type==='cost'){title='Cost Breakdown';titleKo='원가 내역';}
+  else if(type==='profit'){title='Gross Profit Detail';titleKo='총 이익 내역';}
+  else if(type==='proxy'){list=filtered.filter(o=>o.type==='proxy'&&o.proxyStatus==='pending');title='Pending Proxy';titleKo='대행 미처리 목록';}
+  else{title='Billed Orders';titleKo='청구 내역';}
+  const rows=list.map(o=>{const c=getC(o.customerId);const cost=Number(o.cost||0)+Number(o.shippingCost||0);const profit=Number(o.charge)-cost;return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${type==='cost'?won(cost):type==='profit'?`<span style="color:${profit>=0?'var(--green)':'var(--red)'}">${won(profit)}</span>`:won(o.charge)}</td></tr>`;}).join('');
+  showStatDetail(title,titleKo,`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">${type==='cost'?'Cost':type==='profit'?'Profit':'Amount'}</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No orders</td></tr>'}</tbody></table>`);
+}
+function detFin(type){
+  const month=document.getElementById('fin-month')?.value||nowYM();
+  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
+  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(month));
+  let html,title,titleKo;
+  if(type==='rev'){
+    title='Revenue Detail';titleKo='매출 상세';
+    const rows=mo.map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.charge)}</td></tr>`;}).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">Amount</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No orders</td></tr>'}</tbody></table>`;
+  }else if(type==='cost'){
+    title='Cost Detail';titleKo='비용 상세';
+    const rows=mo.filter(o=>Number(o.cost||0)+Number(o.shippingCost||0)>0).map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td class="mono r">${won(o.cost||0)}</td><td class="mono r">${won(o.shippingCost||0)}</td></tr>`;}).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th class="r">COGS</th><th class="r">Shipping</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No cost records</td></tr>'}</tbody></table>`;
+  }else if(type==='exp'){
+    title='Expense Detail';titleKo='경비 상세';
+    const rows=moExp.map(e=>`<tr><td class="mono">${e.date}</td><td>${e.type}</td><td>${e.note||'—'}</td><td class="mono r">${won(e.amount)}</td></tr>`).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Date</th><th>Type</th><th>Note</th><th class="r">Amount</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No expenses</td></tr>'}</tbody></table>`;
+  }else{
+    title='P&L Summary';titleKo='손익 요약';
+    const rev=mo.reduce((s,o)=>s+Number(o.charge),0);
+    const cogs=mo.reduce((s,o)=>s+Number(o.cost||0),0);
+    const ship=mo.reduce((s,o)=>s+Number(o.shippingCost||0),0);
+    const exp=moExp.reduce((s,e)=>s+Number(e.amount),0);const net=rev-cogs-ship-exp;
+    html=`<div class="det-pnl"><div class="det-row"><span>매출 Revenue</span><span class="mono">${won(rev)}</span></div><div class="det-row"><span>원가 COGS</span><span class="mono">−${won(cogs)}</span></div><div class="det-row"><span>배송비 Shipping</span><span class="mono">−${won(ship)}</span></div><div class="det-row"><span>경비 Expenses</span><span class="mono">−${won(exp)}</span></div><div class="det-row total"><span>순이익 Net Profit</span><span class="mono ${net>=0?'green':'red'}">${won(net)}</span></div></div>`;
+  }
+  showStatDetail(title,titleKo,html);
+}
+function detInvTab(type){
+  const month=document.getElementById('inv-month')?.value||nowYM();
+  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
+  let html,title,titleKo;
+  if(type==='rev'){
+    title='Revenue by Customer';titleKo='고객별 매출';
+    const rows=customers.map(c=>{const amt=mo.filter(o=>o.customerId==c.id).reduce((s,o)=>s+Number(o.charge),0);return amt>0?`<tr><td>${c.name}</td><td class="mono r">${won(amt)}</td><td class="r">${mo.filter(o=>o.customerId==c.id).length}건</td></tr>`:''}).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Customer</th><th class="r">Amount</th><th class="r">Orders</th></tr></thead><tbody>${rows||'<tr><td colspan=3 class=empty>No orders</td></tr>'}</tbody></table>`;
+  }else if(type==='cust'){
+    title='Invoiced Customers';titleKo='청구 고객 목록';
+    const rows=[...new Set(mo.map(o=>o.customerId))].map(cid=>{const c=getC(cid);const cnt=mo.filter(o=>o.customerId==cid).length;const amt=mo.filter(o=>o.customerId==cid).reduce((s,o)=>s+Number(o.charge),0);return`<tr><td>${c?c.name:'?'}</td><td>${c?c.contact||'—':'—'}</td><td class="r">${cnt}건</td><td class="mono r">${won(amt)}</td></tr>`;}).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Customer</th><th>Contact</th><th class="r">Orders</th><th class="r">Total</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No customers</td></tr>'}</tbody></table>`;
+  }else if(type==='credit'){
+    title='Credit Orders';titleKo='외상 주문 목록';
+    const rows=mo.filter(o=>o.payment==='credit').map(o=>{const c=getC(o.customerId);return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${won(o.charge)}</td></tr>`;}).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">Amount</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No credit orders</td></tr>'}</tbody></table>`;
+  }else{
+    title='Outstanding Balances';titleKo='미수금 현황';
+    const rows=customers.filter(c=>Number(c.outstanding)>0).sort((a,b)=>b.outstanding-a.outstanding).map(c=>`<tr><td>${c.name}</td><td>${c.contact||'—'}</td><td class="mono r">${won(c.outstanding)}</td></tr>`).join('');
+    html=`<table class="det-tbl"><thead><tr><th>Customer</th><th>Contact</th><th class="r">Outstanding</th></tr></thead><tbody>${rows||'<tr><td colspan=3 class=empty>No outstanding balances</td></tr>'}</tbody></table>`;
+  }
+  showStatDetail(title,titleKo,html);
 }
 
 /* ── DATE HEADER ───────────────────────────────────────────────────────── */
@@ -1793,7 +2149,7 @@ function dlAll(){
   xlsxDownload([
     {name:'Orders',data:ordersFlat()},
     {name:'Customers',data:customers.map(c=>({ID:c.id,Name:c.name,Contact:c.contact,Address:c.address||'',AddressDetail:c.address2||'',SNS:c.sns||'',Type:c.type||'retail',Payment:c.payment,'CreditLimit(₩)':c.creditLimit||0,'Outstanding(₩)':c.outstanding||0,Note:c.note||''}))},
-    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'Price(₩)':p.price,Stock:p.stock,MinStock:p.minStock,Note:p.note||''}))},
+    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'CostPrice(₩)':p.costPrice||0,'SellingPrice(₩)':p.price,Stock:p.stock,MinStock:p.minStock,Note:p.note||''}))},
     {name:'StockMovements',data:inouts.map(io=>{const p=getP(io.productId);return{Date:io.date,Product:p?p.name:'?',Type:io.type,Qty:io.qty,Note:io.note||''}})},
     {name:'Expenses',data:expenses.map(e=>({Date:e.date,Type:e.type,'Amount(₩)':e.amount,Note:e.note||''}))},
     {name:'Events',data:events.map(e=>({Date:e.date,Title:e.en||e.ko,Korean:e.ko,Type:e.type}))},
@@ -1802,7 +2158,7 @@ function dlAll(){
 }
 function dlInventory(){
   xlsxDownload([
-    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'Price(₩)':p.price,Stock:p.stock,MinStock:p.minStock,'Value(₩)':p.stock*p.price,Note:p.note||''}))},
+    {name:'Products',data:products.map(p=>({ID:p.id,Name:p.name,Category:p.cat,'CostPrice(₩)':p.costPrice||0,'SellingPrice(₩)':p.price,Stock:p.stock,MinStock:p.minStock,'InventoryValue(₩)':p.stock*(p.costPrice||0),Note:p.note||''}))},
     {name:'StockMovements',data:inouts.map(io=>{const p=getP(io.productId);return{Date:io.date,Product:p?p.name:'?',Type:io.type,Qty:io.qty,Note:io.note||''}})},
   ],`shanes-inventory-${fmtDate()}.xlsx`);
   toast('✓ Downloaded: Inventory');
@@ -1876,5 +2232,13 @@ if(SCRIPT_URL){setSS('connected');syncFromSheets(true);}
 renderDash();
 setInterval(()=>{if(SCRIPT_URL)syncFromSheets(true);},90000);
 </script>
+<!-- MODAL: Stat Detail Drill-down -->
+<div class="modal-overlay" id="overlay-stat-detail" onclick="if(event.target===this)closeModal('modal-stat-detail')">
+<div class="modal" id="modal-stat-detail" style="max-width:660px;width:94vw;max-height:82vh;display:flex;flex-direction:column;padding:24px 28px">
+  <div class="mth" style="margin-bottom:14px;flex-shrink:0"><div class="me" id="sdd-en"></div><div class="mk" id="sdd-ko"></div></div>
+  <div id="sdd-body" style="overflow-y:auto;flex:1;min-height:0"></div>
+  <div class="mact" style="flex-shrink:0;margin-top:16px"><button class="btn btn-p" onclick="closeModal('modal-stat-detail')">Close</button></div>
+</div>
+</div>
 </body>
 </html>
