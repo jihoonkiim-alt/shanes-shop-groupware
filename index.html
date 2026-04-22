@@ -837,10 +837,15 @@ function won(n){return Number(n||0).toLocaleString('ko-KR')+'원'}
 function populateSel(id,opts){document.getElementById(id).innerHTML='<option value="">Select...</option>'+opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}
 
 function sBadge(o){
+  // 외상(credit) 주문 → 월별 정산 상태 표시 (proxy/stock 무관)
+  if(o.payment==='credit'){
+    const settled=!!settlements[`${o.customerId}-${(o.date||'').slice(0,7)}`];
+    return settled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>';
+  }
+  // 현금 결제 proxy → 배송 상태 표시
   if(o.type==='proxy')return o.proxyStatus==='done'?'<span class="badge bg-green"><span class="bk">Done</span><span class="be">완료</span></span>':'<span class="badge bg-amber"><span class="bk">Pending</span><span class="be">미처리</span></span>';
-  if(o.payment!=='credit')return'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
-  const settled=!!settlements[`${o.customerId}-${(o.date||'').slice(0,7)}`];
-  return settled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>';
+  // 현금 결제 stock
+  return'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
 }
 function pBadge(p){
   const m={credit:'Credit/외상',cash:'Cash/현금',transfer:'Transfer/이체',mixed:'Mixed/혼합'};
