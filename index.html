@@ -1626,10 +1626,12 @@ function renderDash(){
     `<div class="stat" onclick="detDashProfit()"><div class="sk">Net Profit</div><div class="se">순이익 (비용 차감)</div><div class="sv ${profit>=0?'green':'red'}">${won(profit)}</div></div>`+
     `<div class="stat" onclick="detDashProxy()"><div class="sk">Proxy Orders</div><div class="se">구매대행 ${pc}건</div><div class="sv purple">${pc}건 / ${mo.length}건</div></div>`+
     `<div class="stat" onclick="detDashOut()"><div class="sk">Outstanding</div><div class="se">전체 미수금</div><div class="sv ${out>0?'amber':''}">${won(out)}</div></div>`;
+  const dashMonth=nowYM();
   document.getElementById('dash-billing').innerHTML=customers.map(c=>{
     const amt=mo.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
-    if(!amt&&!c.outstanding)return'';
-    return`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${c.outstanding==0?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`;
+    if(!amt)return'';
+    const isSettled=!!settlements[`${c.id}-${dashMonth}`];
+    return`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${isSettled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`;
   }).join('')||'<tr><td colspan="3" class="empty">No billing this month</td></tr>';
   const ls=products.filter(p=>Number(p.stock)<=Number(p.minStock));
   document.getElementById('dash-stock').innerHTML=ls.length?ls.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
@@ -1688,11 +1690,9 @@ function renderOrders(){
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
-    const settlKey=`${o.customerId}-${(o.date||'').slice(0,7)}`;
-    const isSettled=!!settlements[settlKey];
     const actionBtn=o.type==='proxy'
       ?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`
-      :(o.type==='stock'&&o.payment==='credit'?`<button class="btn btn-xs ${isSettled?'':'btn-p'}" style="margin-right:3px" onclick="toggleSettled(${o.customerId},'${(o.date||'').slice(0,7)}',event)">${isSettled?'↩ 정산취소':'✓ 정산완료'}</button>`:'');
+      :'';
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td><span class="mono">${totalCost>0?won(totalCost):'—'}</span></td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${actionBtn}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="10" class="empty">No orders for this period</td></tr>';
 }
