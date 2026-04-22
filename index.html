@@ -789,8 +789,8 @@ async function syncFromSheets(silent=false){
     if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});const sheetsIoIds=new Set(res.inouts.map(io=>String(io.id).trim()));const localOnly=noDel((inouts||[]).filter(io=>!sheetsIoIds.has(String(io.id).trim())),'StockMovements');const fromSheets=noDel(res.inouts,'StockMovements').map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});inouts=[...fromSheets,...localOnly];LS.set('inouts',inouts)}
     if(Array.isArray(res.events)){events=noDel(res.events,'Events').map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));LS.set('events',events)}
     if(Array.isArray(res.expenses)){expenses=noDel(res.expenses,'Expenses').map(e=>({...e,date:normDate(e.date)}));LS.set('expenses',expenses)}
-    /* 고아 inout 정리: orderId 있는 Sale-out 중 매칭 주문 없는 것 제거 */
-    {const oIds=new Set(orders.map(o=>String(o.id)));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&!oIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
+    /* 고아 inout 정리: 명시적으로 삭제된 주문(Orders _del)의 Sale-out 인출만 제거 */
+    {let _delO;try{_delO=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_delO={}}const deletedOrderIds=new Set((_delO['Orders']||[]).map(String));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&deletedOrderIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
     setSS('connected');
     if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
