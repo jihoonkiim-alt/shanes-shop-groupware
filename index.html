@@ -1605,36 +1605,44 @@ async function deleteOrder(id){
   if(!confirm('Delete this order?'))return;
   const o=orders.find(x=>x.id==id);
   orders=orders.filter(x=>x.id!=id);LS.set('orders',orders);
-  /* ── outstanding 재계산 ── */
-  if(o&&o.payment==='credit')await recalcCustomerOutstanding(o.customerId);
-  /* ── 재고 복원 + inout 삭제 (stock 주문만) ── */
-  if(o&&o.type==='stock'){
+  /* ── 연결된 inout 찾기: orderId 우선, 없으면 날짜+상품+조건 fallback ── */
+  const removedIoIds=[];
+  const tid=String(id).trim();
+  inouts.forEach(io=>{
+    const oid=String(io.orderId??'').trim();
+    if(oid&&oid!=='null'&&oid!=='undefined'&&oid===tid)removedIoIds.push(io.id);
+  });
+  if(!removedIoIds.length&&o){
     let _rawItems=o.items;if(typeof _rawItems==='string'){try{_rawItems=JSON.parse(_rawItems)}catch{_rawItems=null}}
     const ioItems=(Array.isArray(_rawItems)&&_rawItems.length)?_rawItems:[{pid:o.productId,qty:o.qty}];
-    const removedIoIds=[];
     for(const item of ioItems){
-      /* orderId 연결된 기록 우선, 없으면 날짜+상품+타입으로 매칭 (중복 방지) */
       const idx=inouts.findIndex(io=>{
         if(removedIoIds.includes(io.id))return false;
-        const oid=String(io.orderId==null||io.orderId===undefined?'':io.orderId).trim();
-        const tid=String(id).trim();
-        if(oid&&oid!=='null'&&oid!=='undefined'&&oid===tid)return true;
-        const noOid=!oid||oid==='null'||oid==='undefined';
-        return noOid&&io.date===o.date&&String(io.productId).trim()===String(item.pid).trim()&&(io.type||'').trim()==='out'&&(io.note||'').trim()==='Sale'&&Number(io.qty)===Number(item.qty);
+        return io.date===o.date&&String(io.productId).trim()===String(item.pid).trim()&&(io.type||'').trim()==='out'&&(io.note||'').trim()==='Sale'&&Number(io.qty)===Number(item.qty);
       });
-      if(idx>=0){
-        removedIoIds.push(inouts[idx].id);
-        const p=getP(item.pid);
-        if(p){p.stock=Number(p.stock)+Number(item.qty);LS.set('products',products);await updateRow('Products',item.pid,{stock:p.stock});}
-      }
-    }
-    if(removedIoIds.length){
-      inouts=inouts.filter(io=>!removedIoIds.includes(io.id));
-      LS.set('inouts',inouts);
-      for(const ioId of removedIoIds){markDeleted('StockMovements',ioId);await deleteRow('StockMovements',ioId);}
+      if(idx>=0)removedIoIds.push(inouts[idx].id);
     }
   }
-  markDeleted('Orders',id);toast('Deleted');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();await deleteRow('Orders',id);
+  /* ── 재고 복원 ── */
+  const affectedPids=new Set();
+  if(removedIoIds.length){
+    removedIoIds.forEach(ioId=>{
+      const io=inouts.find(x=>x.id==ioId);
+      if(io){const p=getP(io.productId);if(p){p.stock=Number(p.stock)+Number(io.qty);affectedPids.add(io.productId);}}
+    });
+    LS.set('products',products);
+    inouts=inouts.filter(io=>!removedIoIds.includes(io.id));
+    LS.set('inouts',inouts);
+    removedIoIds.forEach(ioId=>markDeleted('StockMovements',ioId));
+  }
+  if(o&&o.payment==='credit')recalcCustomerOutstanding(o.customerId);
+  markDeleted('Orders',id);
+  toast('Deleted');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
+  Promise.all([
+    deleteRow('Orders',id),
+    ...removedIoIds.map(ioId=>deleteRow('StockMovements',ioId)),
+    ...[...affectedPids].map(pid=>{const p=getP(pid);return p?updateRow('Products',pid,{stock:p.stock}):null}).filter(Boolean)
+  ]);
 }
 async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);markDeleted('Products',id);toast('Deleted');renderInventory();renderDash();await deleteRow('Products',id);}
 async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);markDeleted('Customers',id);toast('Deleted');renderCustomers('');renderDash();renderInvoices();await deleteRow('Customers',id);}
