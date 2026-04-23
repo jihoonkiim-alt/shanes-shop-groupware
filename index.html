@@ -783,12 +783,15 @@ async function syncFromSheets(silent=false){
     let _del;try{_del=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_del={}}
     if(!_del||Array.isArray(_del)||typeof _del!=='object')_del={};
     const noDel=(arr,sheet)=>(arr||[]).filter(r=>!(_del[sheet]||[]).includes(String(r.id).trim()));
-    if(Array.isArray(res.customers)){const sIds=new Set(res.customers.map(r=>String(r.id).trim()));const localOnly=noDel((customers||[]).filter(r=>!sIds.has(String(r.id).trim())),'Customers');customers=[...noDel(res.customers,'Customers'),...localOnly];LS.set('customers',customers)}
-    if(Array.isArray(res.products)){const sIds=new Set(res.products.map(r=>String(r.id).trim()));const localOnly=noDel((products||[]).filter(r=>!sIds.has(String(r.id).trim())),'Products');products=[...noDel(res.products,'Products'),...localOnly];LS.set('products',products)}
-    if(Array.isArray(res.orders)){const sIds=new Set(res.orders.map(r=>String(r.id).trim()));const localOnly=noDel((orders||[]).filter(r=>!sIds.has(String(r.id).trim())),'Orders');const fromSheets=noDel(res.orders,'Orders').map(o=>{let items=o.items;if(typeof items==='string'){try{items=JSON.parse(items)}catch{items=null}}return{...o,date:normDate(o.date),items:Array.isArray(items)&&items.length?items:undefined};});orders=[...fromSheets,...localOnly];LS.set('orders',orders)}
-    if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});const sheetsIoIds=new Set(res.inouts.map(io=>String(io.id).trim()));const localOnly=noDel((inouts||[]).filter(io=>!sheetsIoIds.has(String(io.id).trim())),'StockMovements');const fromSheets=noDel(res.inouts,'StockMovements').map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});inouts=[...fromSheets,...localOnly];LS.set('inouts',inouts)}
-    if(Array.isArray(res.events)){const sIds=new Set(res.events.map(r=>String(r.id).trim()));const localOnly=noDel((events||[]).filter(r=>!sIds.has(String(r.id).trim())),'Events');const fromSheets=noDel(res.events,'Events').map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));events=[...fromSheets,...localOnly];LS.set('events',events)}
-    if(Array.isArray(res.expenses)){const sIds=new Set(res.expenses.map(r=>String(r.id).trim()));const localOnly=noDel((expenses||[]).filter(r=>!sIds.has(String(r.id).trim())),'Expenses');const fromSheets=noDel(res.expenses,'Expenses').map(e=>({...e,date:normDate(e.date)}));expenses=[...fromSheets,...localOnly];LS.set('expenses',expenses)}
+    let _pend;try{_pend=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{_pend={}}
+    if(!_pend||Array.isArray(_pend)||typeof _pend!=='object')_pend={};
+    const pendIds=(sheet)=>new Set((_pend[sheet]||[]).map(String));
+    if(Array.isArray(res.customers)){const sIds=new Set(res.customers.map(r=>String(r.id).trim()));const pIds=pendIds('Customers');const localOnly=noDel((customers||[]).filter(r=>!sIds.has(String(r.id).trim())),'Customers');const localEdits=noDel((customers||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Customers');customers=[...noDel(res.customers,'Customers').filter(r=>!pIds.has(String(r.id).trim())),...localOnly,...localEdits];LS.set('customers',customers)}
+    if(Array.isArray(res.products)){const sIds=new Set(res.products.map(r=>String(r.id).trim()));const pIds=pendIds('Products');const localOnly=noDel((products||[]).filter(r=>!sIds.has(String(r.id).trim())),'Products');const localEdits=noDel((products||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Products');products=[...noDel(res.products,'Products').filter(r=>!pIds.has(String(r.id).trim())),...localOnly,...localEdits];LS.set('products',products)}
+    if(Array.isArray(res.orders)){const sIds=new Set(res.orders.map(r=>String(r.id).trim()));const pIds=pendIds('Orders');const localOnly=noDel((orders||[]).filter(r=>!sIds.has(String(r.id).trim())),'Orders');const localEdits=noDel((orders||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Orders');const fromSheets=noDel(res.orders,'Orders').filter(o=>!pIds.has(String(o.id).trim())).map(o=>{let items=o.items;if(typeof items==='string'){try{items=JSON.parse(items)}catch{items=null}}return{...o,date:normDate(o.date),items:Array.isArray(items)&&items.length?items:undefined};});orders=[...fromSheets,...localOnly,...localEdits];LS.set('orders',orders)}
+    if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});const sheetsIoIds=new Set(res.inouts.map(io=>String(io.id).trim()));const pIds=pendIds('StockMovements');const localOnly=noDel((inouts||[]).filter(io=>!sheetsIoIds.has(String(io.id).trim())),'StockMovements');const localEdits=noDel((inouts||[]).filter(io=>pIds.has(String(io.id).trim())&&sheetsIoIds.has(String(io.id).trim())),'StockMovements');const fromSheets=noDel(res.inouts,'StockMovements').filter(o=>!pIds.has(String(o.id).trim())).map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});inouts=[...fromSheets,...localOnly,...localEdits];LS.set('inouts',inouts)}
+    if(Array.isArray(res.events)){const sIds=new Set(res.events.map(r=>String(r.id).trim()));const pIds=pendIds('Events');const localOnly=noDel((events||[]).filter(r=>!sIds.has(String(r.id).trim())),'Events');const localEdits=noDel((events||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Events');const fromSheets=noDel(res.events,'Events').filter(r=>!pIds.has(String(r.id).trim())).map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));events=[...fromSheets,...localOnly,...localEdits];LS.set('events',events)}
+    if(Array.isArray(res.expenses)){const sIds=new Set(res.expenses.map(r=>String(r.id).trim()));const pIds=pendIds('Expenses');const localOnly=noDel((expenses||[]).filter(r=>!sIds.has(String(r.id).trim())),'Expenses');const localEdits=noDel((expenses||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Expenses');const fromSheets=noDel(res.expenses,'Expenses').filter(r=>!pIds.has(String(r.id).trim())).map(e=>({...e,date:normDate(e.date)}));expenses=[...fromSheets,...localOnly,...localEdits];LS.set('expenses',expenses)}
     /* 고아 inout 정리: 명시적으로 삭제된 주문(Orders _del)의 Sale-out 인출만 제거 */
     {let _delO;try{_delO=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_delO={}}const deletedOrderIds=new Set((_delO['Orders']||[]).map(String));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&deletedOrderIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
     setSS('connected');
@@ -805,7 +808,18 @@ async function syncFromSheets(silent=false){
   }else{setSS(SCRIPT_URL?'connected':'off');if(!silent)toast('⚠ Sync failed — check Sheets URL')}
 }
 async function pushRow(sheet,obj){if(SCRIPT_URL)await sheetsReq('append',{sheet,row:obj})}
-async function updateRow(sheet,id,obj){if(SCRIPT_URL)await sheetsReq('update',{sheet,id,updates:obj})}
+async function updateRow(sheet,id,obj){
+  if(!SCRIPT_URL)return;
+  let p;try{p=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{p={}}
+  if(!p[sheet])p[sheet]=[];
+  const sid=String(id);
+  if(!p[sheet].includes(sid))p[sheet].push(sid);
+  localStorage.setItem('shs__pending',JSON.stringify(p));
+  const res=await sheetsReq('update',{sheet,id,updates:obj});
+  if(res&&res.ok){let p2;try{p2=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{p2={}}
+    if(p2[sheet])p2[sheet]=p2[sheet].filter(x=>x!==sid);
+    localStorage.setItem('shs__pending',JSON.stringify(p2));}
+}
 async function deleteRow(sheet,id){if(SCRIPT_URL)await sheetsReq('delete',{sheet,id});}
 function markDeleted(sheet,id){
   let d;try{d=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{d={}}
