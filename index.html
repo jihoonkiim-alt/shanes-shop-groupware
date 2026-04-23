@@ -1010,6 +1010,10 @@ async function pushCustomersToSheets(){
       await Promise.all(batch.map(chunk=>sheetsReq('bulkAppend',{sheet:'Customers',rows:JSON.stringify(chunk)})));
     }
     toast(`✓ ${customers.length} customers pushed to Sheets`);
+    let _pp;try{_pp=JSON.parse(localStorage.getItem('shs__pending_push')||'{}')}catch{_pp={}}
+    delete _pp['Customers'];localStorage.setItem('shs__pending_push',JSON.stringify(_pp));
+    let _pu;try{_pu=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{_pu={}}
+    delete _pu['Customers'];localStorage.setItem('shs__pending',JSON.stringify(_pu));
   }catch(err){toast('⚠ Push failed: '+err.message)}
   btn.textContent='↑ Push to Sheets';btn.disabled=false;
 }
@@ -1178,7 +1182,8 @@ async function saveOrder(){
   if(o.payment==='credit')await recalcCustomerOutstanding(custId);
   await pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId||'',
     qty:o.qty,cost:o.cost,shippingCost:o.shippingCost||0,charge:o.charge,platform:o.platform||'',
-    receiptNo:o.receiptNo||'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:o.url||''});
+    receiptNo:o.receiptNo||'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:o.url||'',
+    items:o.items?JSON.stringify(o.items):''});
   closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
 }
 
@@ -1369,7 +1374,7 @@ async function settleCredit(cid){
   await updateRow('Customers',cid,{outstanding:0});
   const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료 ${won(amt)}`,en:`Settlement — ${c.name} ${won(amt)}`,type:'billing'};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,ko:ev.ko,en:ev.en,type:ev.type});
+  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:'',recur:'none'});
   toast('✓ Settlement recorded');renderCustomers('');
 }
 /* ── ORDER IMPORT (XLSX) ────────────────────────────────────────────────── */
