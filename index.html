@@ -1266,20 +1266,22 @@ async function saveInout(){
 async function deleteInout(id){
   if(!confirm('Delete this movement?'))return;
   const io=inouts.find(x=>x.id==id);
+  let stockPid=null,newStock=null;
   if(io){
     const p=getP(io.productId);
     if(p){
       if(io.type==='in')p.stock=Math.max(0,Number(p.stock)-Number(io.qty));
       else if(io.type==='out')p.stock=Number(p.stock)+Number(io.qty);
       LS.set('products',products);
-      await updateRow('Products',io.productId,{stock:p.stock});
+      stockPid=io.productId;newStock=p.stock;
     }
   }
   inouts=inouts.filter(x=>x.id!=id);
   LS.set('inouts',inouts);
   markDeleted('StockMovements',id);
-  await deleteRow('StockMovements',id);
   toast('Deleted');renderInventory();renderDash();
+  if(stockPid!=null)await updateRow('Products',stockPid,{stock:newStock});
+  await deleteRow('StockMovements',id);
 }
 function openEditInout(id){
   const io=inouts.find(x=>x.id==id);if(!io)return;
@@ -1629,18 +1631,18 @@ async function deleteOrder(id){
       for(const ioId of removedIoIds){markDeleted('StockMovements',ioId);await deleteRow('StockMovements',ioId);}
     }
   }
-  markDeleted('Orders',id);await deleteRow('Orders',id);toast('Deleted');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
+  markDeleted('Orders',id);toast('Deleted');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();await deleteRow('Orders',id);
 }
-async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);markDeleted('Products',id);await deleteRow('Products',id);toast('Deleted');renderInventory();renderDash();}
-async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);markDeleted('Customers',id);await deleteRow('Customers',id);toast('Deleted');renderCustomers('');renderDash();renderInvoices();}
+async function deleteProduct(id){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.id!=id);LS.set('products',products);markDeleted('Products',id);toast('Deleted');renderInventory();renderDash();await deleteRow('Products',id);}
+async function deleteCustomer(id){if(!confirm('Delete this customer?'))return;customers=customers.filter(c=>c.id!=id);LS.set('customers',customers);markDeleted('Customers',id);toast('Deleted');renderCustomers('');renderDash();renderInvoices();await deleteRow('Customers',id);}
 async function deleteEvent(id){
   const ev=events.find(e=>e.id==id);
   if(ev&&ev.recur&&ev.recur!=='none'){
     if(!confirm('반복 일정 전체를 삭제합니다.\nThis will delete all occurrences. Continue?'))return;
   }
-  events=events.filter(e=>e.id!=id);LS.set('events',events);markDeleted('Events',id);await deleteRow('Events',id);toast('Deleted');renderCalendar();
+  events=events.filter(e=>e.id!=id);LS.set('events',events);markDeleted('Events',id);toast('Deleted');renderCalendar();await deleteRow('Events',id);
 }
-async function deleteExpense(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!=id);LS.set('expenses',expenses);markDeleted('Expenses',id);await deleteRow('Expenses',id);toast('Deleted');renderFinance();renderDash();}
+async function deleteExpense(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!=id);LS.set('expenses',expenses);markDeleted('Expenses',id);toast('Deleted');renderFinance();renderDash();await deleteRow('Expenses',id);}
 
 /* ── outstanding 재계산 (scratch) ────────────────────────────────────────── */
 async function recalcCustomerOutstanding(cid){
