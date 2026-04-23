@@ -1317,11 +1317,13 @@ async function saveEditInout(){
   const p=getP(io.productId);
   let stockJob2=null;
   if(p){
+    /* 이전 효과 되돌리기 (adjust는 직접 설정이라 역산 불가 → 현재값 유지) */
     if(oldType==='in')p.stock=Math.max(0,Number(p.stock)-oldQty);
     else if(oldType==='out')p.stock=Number(p.stock)+oldQty;
+    /* 새 값 적용 */
     if(newType==='in')p.stock=Number(p.stock)+newQty;
     else if(newType==='out')p.stock=Math.max(0,Number(p.stock)-newQty);
-    else p.stock=newQty;
+    else p.stock=newQty; /* adjust: 직접 설정 */
     LS.set('products',products);
     stockJob2=()=>updateRow('Products',io.productId,{stock:p.stock});
   }
@@ -1396,10 +1398,15 @@ async function settleCredit(cid){
   const c=getC(cid);if(!c)return;
   const amt=c.outstanding;
   if(!confirm(`Settle ${won(amt)} outstanding for ${c.name}?`))return;
+  /* 모든 미정산 월을 settlements에 기록 → sync 후 재계산 시 복원 방지 */
+  const creditOrds=orders.filter(o=>String(o.customerId)===String(cid)&&o.payment==='credit');
+  const months=[...new Set(creditOrds.map(o=>o.date?o.date.slice(0,7):null).filter(Boolean))];
+  months.forEach(m=>{const key=`${cid}-${m}`;if(!settlements[key])settlements[key]=true;});
+  LS.set('settlements',settlements);
   c.outstanding=0;LS.set('customers',customers);
   const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료 ${won(amt)}`,en:`Settlement — ${c.name} ${won(amt)}`,type:'billing'};
   events.push(ev);LS.set('events',events);
-  toast('✓ Settlement recorded');renderCustomers('');
+  toast('✓ Settlement recorded');renderCustomers('');renderInvoices();
   Promise.all([updateRow('Customers',cid,{outstanding:0}),pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:'',recur:'none'})]);
 }
 /* ── ORDER IMPORT (XLSX) ────────────────────────────────────────────────── */
@@ -1710,7 +1717,7 @@ function renderDash(){
     const isSettled=!!settlements[`${c.id}-${dashMonth}`];
     return`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${isSettled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`;
   }).join('')||'<tr><td colspan="3" class="empty">No billing this month</td></tr>';
-  const ls=products.filter(p=>Number(p.stock)<=Number(p.minStock));
+  const ls=products.filter(p=>!p.discontinued&&Number(p.stock)<=Number(p.minStock));
   document.getElementById('dash-stock').innerHTML=ls.length?ls.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
   const recent=[...orders].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
   document.getElementById('dash-orders').innerHTML=recent.length?recent.map(o=>{
