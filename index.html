@@ -178,6 +178,11 @@ tr:hover td{background:var(--bg)}
 .fin-row:last-child{border-bottom:none;font-weight:600;font-size:13px;color:var(--green)}
 .fin-row.neg{color:var(--red)}.fin-row.subtotal{color:var(--text2)}
 .tax-tip{background:var(--aml);border:1px solid var(--amb);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--amber);line-height:1.8;margin-top:12px}
+.fin-yr-total td{background:var(--al);font-weight:700;border-top:2px solid var(--border2) !important}
+.itax-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.itax-row:last-child{border-bottom:none}.itax-row.indent{padding-left:14px;color:var(--text2);font-size:11px}
+.itax-row.sub-end{border-bottom:2px solid var(--border2);margin-bottom:2px}
+.tax-note{font-size:10px;color:var(--text3);line-height:1.6;margin-top:10px;padding:8px 10px;background:var(--bg);border-radius:6px}
 
 /* CALENDAR */
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
@@ -371,28 +376,29 @@ tr:hover td{background:var(--bg)}
   <div class="ph">
     <div><div class="pte">Finance &amp; Tax</div><div class="ptk">재무 · 세무 관리</div></div>
     <div class="btn-row">
-      <select id="fin-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderFinance()"></select>
+      <select id="fin-year" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderFinance()"></select>
       <button class="btn btn-p" onclick="openModal('modal-expense')">+ Add Expense</button>
       <button class="btn" onclick="dlFinance()">⬇ .xlsx</button>
       <button class="btn" onclick="printFinance()">🖨 Print / PDF</button>
     </div>
   </div>
-  <div class="stats" id="fin-stats"></div>
-  <div class="two-col">
-    <div>
-      <div class="fin-box">
-        <div class="fb-t">Monthly P&amp;L — Income Statement <span style="font-size:10px;font-weight:400;color:var(--text3)">/ 손익계산서</span></div>
-        <div id="fin-pnl"></div>
-        <div class="tax-tip" id="fin-tax"></div>
-      </div>
-    </div>
-    <div>
-      <div class="card"><div class="ch"><div><div class="ce">6-Month Summary</div><div class="ck">최근 6개월 요약</div></div></div>
-        <table><thead><tr><th><span class="te">Month</span><span class="tk">월</span></th><th><span class="te">Revenue</span><span class="tk">매출</span></th><th><span class="te">Expenses</span><span class="tk">비용</span></th><th><span class="te">Net</span><span class="tk">순이익</span></th></tr></thead><tbody id="fin-history"></tbody></table></div>
-    </div>
+  <!-- 연간 요약 stats -->
+  <div id="fin-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px"></div>
+  <!-- 월별 손익계산서 -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><div><div class="ce">Monthly P&amp;L — 월별 손익계산서</div><div class="ck">매월 매출 · 원가 · 경비 · 순이익 내역</div></div></div>
+    <table><thead><tr><th>월</th><th style="text-align:right">매출</th><th style="text-align:right">원가+배송</th><th style="text-align:right">경비</th><th style="text-align:right">순이익</th><th style="text-align:right">누계</th></tr></thead><tbody id="fin-monthly"></tbody></table>
   </div>
-  <div class="card"><div class="ch"><div><div class="ce">Expense Log</div><div class="ck">지출 내역</div></div></div>
-    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Note</span><span class="tk">메모</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="expense-table"></tbody></table></div>
+  <!-- 부가세 + 종소세 -->
+  <div class="two-col" style="margin-bottom:14px">
+    <div><div class="fin-box" id="fin-vat"></div></div>
+    <div><div class="fin-box" id="fin-itax"></div></div>
+  </div>
+  <!-- 지출 명세 -->
+  <div class="card">
+    <div class="ch"><div><div class="ce">Expense Log</div><div class="ck">연간 지출 명세</div></div></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th style="text-align:right"><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Note</span><span class="tk">메모</span></th><th></th></tr></thead><tbody id="expense-table"></tbody></table>
+  </div>
 </div>
 
 <!-- CUSTOMERS -->
@@ -1746,67 +1752,105 @@ function renderOrders(){
 
 /* ── RENDER: FINANCE ───────────────────────────────────────────────────── */
 function renderFinancePage(){
-  const sel=document.getElementById('fin-month');
+  const sel=document.getElementById('fin-year');
   if(!sel.options.length){
     const now=new Date();let opts='';
-    for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const v=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;opts+=`<option value="${v}"${i===0?' selected':''}>${d.getFullYear()}. ${d.getMonth()+1}</option>`}
+    for(let i=0;i<4;i++){const y=now.getFullYear()-i;opts+=`<option value="${y}"${i===0?' selected':''}>${y}년</option>`}
     sel.innerHTML=opts;
   }
   renderFinance();
 }
 function renderFinance(){
-  const sel=document.getElementById('fin-month');
-  if(!sel)return;
-  const month=sel.value||nowYM();
-  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
-  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(month));
-  const revenue=mo.reduce((s,o)=>s+Number(o.charge),0);
-  const cogs=mo.reduce((s,o)=>s+Number(o.cost||0),0);
-  const shipping=mo.reduce((s,o)=>s+Number(o.shippingCost||0),0);
-  const expTotal=moExp.reduce((s,e)=>s+Number(e.amount),0);
-  const gross=revenue-cogs;
-  const net=gross-shipping-expTotal;
+  const sel=document.getElementById('fin-year');if(!sel)return;
+  const year=sel.value||String(new Date().getFullYear());
+  const yOrds=orders.filter(o=>o.date&&o.date.startsWith(year));
+  const yExps=expenses.filter(e=>e.date&&e.date.startsWith(year));
+  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0);
+  const annCogs=yOrds.reduce((s,o)=>s+Number(o.cost||0),0);
+  const annShip=yOrds.reduce((s,o)=>s+Number(o.shippingCost||0),0);
+  const annExp=yExps.reduce((s,e)=>s+Number(e.amount),0);
+  const annCost=annCogs+annShip+annExp;
+  const annProfit=annRev-annCost;
 
+  /* ── 연간 요약 stats ── */
   document.getElementById('fin-stats').innerHTML=
-    `<div class="stat" onclick="detFin('rev')"><div class="sk">Revenue</div><div class="se">매출 (청구 합계)</div><div class="sv green">${won(revenue)}</div></div>`+
-    `<div class="stat" onclick="detFin('cost')"><div class="sk">Total Cost</div><div class="se">원가 + 배송비</div><div class="sv">${won(cogs+shipping)}</div></div>`+
-    `<div class="stat" onclick="detFin('exp')"><div class="sk">Expenses</div><div class="se">사업 경비</div><div class="sv amber">${won(expTotal)}</div></div>`+
-    `<div class="stat" onclick="detFin('profit')"><div class="sk">Net Profit</div><div class="se">순이익</div><div class="sv ${net>=0?'green':'red'}">${won(net)}</div></div>`;
+    `<div class="stat"><div class="sk">Annual Revenue</div><div class="se">${year}년 총 매출</div><div class="sv green">${won(annRev)}</div></div>`+
+    `<div class="stat"><div class="sk">Total Costs</div><div class="se">원가+배송+경비</div><div class="sv">${won(annCost)}</div></div>`+
+    `<div class="stat"><div class="sk">Net Profit</div><div class="se">순이익</div><div class="sv ${annProfit>=0?'green':'red'}">${won(annProfit)}</div></div>`+
+    `<div class="stat"><div class="sk">Taxable Income</div><div class="se">과세소득 추정</div><div class="sv ${annProfit>0?'amber':''}">${won(Math.max(0,annProfit))}</div></div>`;
 
-  document.getElementById('fin-pnl').innerHTML=
-    `<div class="fin-row"><span>💰 Revenue (Sales)</span><span class="mono">${won(revenue)}</span></div>`+
-    `<div class="fin-row subtotal"><span>　— Cost of Goods (원가)</span><span class="mono">− ${won(cogs)}</span></div>`+
-    `<div class="fin-row subtotal"><span>　— Shipping Cost (배송비)</span><span class="mono">− ${won(shipping)}</span></div>`+
-    `<div class="fin-row subtotal" style="border-bottom:2px solid var(--border2);padding-bottom:10px;margin-bottom:4px"><span>　— Business Expenses (경비)</span><span class="mono">− ${won(expTotal)}</span></div>`+
-    `<div class="fin-row ${net>=0?'':'neg'}"><span>= Net Profit (순이익)</span><span class="mono">${won(net)}</span></div>`;
+  /* ── 월별 손익표 ── */
+  let cum=0,mRows='';
+  for(let m=1;m<=12;m++){
+    const ym=`${year}-${String(m).padStart(2,'0')}`;
+    const mO=orders.filter(o=>o.date&&o.date.startsWith(ym));
+    const mE=expenses.filter(e=>e.date&&e.date.startsWith(ym));
+    const r=mO.reduce((s,o)=>s+Number(o.charge),0);
+    const c=mO.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
+    const ex=mE.reduce((s,e)=>s+Number(e.amount),0);
+    const n=r-c-ex;cum+=n;
+    const has=r||c||ex;
+    const nc=`font-family:'DM Mono',monospace;text-align:right`;
+    mRows+=`<tr${!has?' style="opacity:.35"':''}>
+      <td style="font-weight:600">${m}월</td>
+      <td style="${nc};color:var(--green)">${r?won(r):'—'}</td>
+      <td style="${nc};color:var(--text2)">${c?won(c):'—'}</td>
+      <td style="${nc};color:var(--amber)">${ex?won(ex):'—'}</td>
+      <td style="${nc};font-weight:600;color:${n>0?'var(--green)':n<0?'var(--red)':'var(--text2)'}">${has?won(n):'—'}</td>
+      <td style="${nc};font-size:11px;color:${cum>=0?'var(--green)':'var(--red)'}">${has?won(cum):'—'}</td>
+    </tr>`;
+  }
+  mRows+=`<tr class="fin-yr-total"><td><strong>합 계</strong></td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--green)">${won(annRev)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(annCogs+annShip)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(annExp)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:${annProfit>=0?'var(--green)':'var(--red)'}">${won(annProfit)}</td><td></td></tr>`;
+  document.getElementById('fin-monthly').innerHTML=mRows;
 
-  const taxDeductible=cogs+shipping+expTotal;
-  document.getElementById('fin-tax').innerHTML=
-    `📋 <strong>Tax Summary / 세무 요약</strong><br>`+
-    `Monthly Income (수입): <strong>${won(revenue)}</strong><br>`+
-    `Deductible Expenses (공제 비용): <strong>${won(taxDeductible)}</strong><br>`+
-    `Taxable Income (과세 소득): <strong>${won(Math.max(0,net))}</strong><br>`+
-    `<span style="font-size:10px;opacity:.8">※ 간이과세자 연 매출 8,000만원 기준 / 세무사 상담 권장</span>`;
+  /* ── 부가세 참고자료 ── */
+  const vatPeriods=[{q:'1기',label:'상반기 (1~6월)',mm:['01','02','03','04','05','06']},{q:'2기',label:'하반기 (7~12월)',mm:['07','08','09','10','11','12']}];
+  let vatRows='';
+  vatPeriods.forEach(p=>{
+    const r=orders.filter(o=>o.date&&o.date.startsWith(year)&&p.mm.includes(o.date.slice(5,7))).reduce((s,o)=>s+Number(o.charge),0);
+    const sv=Math.round(r/1.1);const vt=r-sv;
+    vatRows+=`<tr><td style="font-size:11px">${p.q} ${p.label}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(r)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(sv)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(vt)}</td></tr>`;
+  });
+  vatRows+=`<tr style="font-weight:700;border-top:2px solid var(--border2)"><td>연 합계</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(annRev)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(Math.round(annRev/1.1))}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(annRev-Math.round(annRev/1.1))}</td></tr>`;
+  document.getElementById('fin-vat').innerHTML=
+    `<div class="fb-t">부가세 참고자료 <span style="font-size:10px;font-weight:400;color:var(--text3)">/ VAT Reference</span></div>`+
+    `<table style="width:100%"><thead><tr><th>과세기간</th><th style="text-align:right">공급대가(매출)</th><th style="text-align:right">공급가액(추정)</th><th style="text-align:right">매출세액(10%)</th></tr></thead><tbody>${vatRows}</tbody></table>`+
+    `<div class="tax-note">※ 공급가액은 공급대가의 100/110 기준 추정. 매입세액공제 후 실제 납부세액은 달라지며, 간이과세자는 업종별 부가가치율 적용. 신고 전 세무사 상담 권장.</div>`;
 
-  // 6-month history
-  const now=new Date();
-  document.getElementById('fin-history').innerHTML=Array.from({length:6},(_,i)=>{
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const mOrd=orders.filter(o=>o.date&&o.date.startsWith(ym));
-    const mExp=expenses.filter(e=>e.date&&e.date.startsWith(ym));
-    const r=mOrd.reduce((s,o)=>s+Number(o.charge),0);
-    const c=mOrd.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
-    const ex=mExp.reduce((s,e)=>s+Number(e.amount),0);
-    const n=r-c-ex;
-    return`<tr${ym===month?' style="background:var(--al)"':''}><td class="mono" style="font-size:11px">${d.getFullYear()}.${d.getMonth()+1}</td><td class="mono" style="color:var(--green)">${won(r)}</td><td class="mono" style="color:var(--amber)">${won(c+ex)}</td><td class="mono" style="color:${n>=0?'var(--green)':'var(--red)'}"><strong>${won(n)}</strong></td></tr>`;
-  }).join('');
+  /* ── 종합소득세 참고자료 ── */
+  function korTax(inc){
+    if(inc<=0)return{label:'과세미달',tax:0};
+    if(inc<=14000000)return{label:'6%',tax:Math.round(inc*0.06)};
+    if(inc<=50000000)return{label:'15% (누진공제 126만원)',tax:Math.round(inc*0.15-1260000)};
+    if(inc<=88000000)return{label:'24% (누진공제 576만원)',tax:Math.round(inc*0.24-5760000)};
+    if(inc<=150000000)return{label:'35% (누진공제 1,544만원)',tax:Math.round(inc*0.35-15440000)};
+    if(inc<=300000000)return{label:'38% (누진공제 1,994만원)',tax:Math.round(inc*0.38-19940000)};
+    return{label:'40% (누진공제 2,594만원)',tax:Math.round(inc*0.40-25940000)};
+  }
+  const {label:taxLabel,tax:taxAmt}=korTax(Math.max(0,annProfit));
+  const catMap={shipping:'배송비',packaging:'포장비',fee:'플랫폼 수수료',other:'기타 경비'};
+  const catTotals={};yExps.forEach(e=>{catTotals[e.type]=(catTotals[e.type]||0)+Number(e.amount);});
+  const catRows=Object.entries(catMap).map(([k,v])=>{const a=catTotals[k]||0;return a?`<div class="itax-row indent"><span>${v}</span><span style="font-family:'DM Mono',monospace">− ${won(a)}</span></div>`:''}).join('');
+  const mn=`font-family:'DM Mono',monospace`;
+  document.getElementById('fin-itax').innerHTML=
+    `<div class="fb-t">종합소득세 참고자료 <span style="font-size:10px;font-weight:400;color:var(--text3)">/ Income Tax Reference</span></div>`+
+    `<div class="itax-row"><span>① 수입금액 (총 매출)</span><span style="${mn};color:var(--green);font-weight:600">${won(annRev)}</span></div>`+
+    `<div style="font-size:11px;font-weight:600;color:var(--text2);padding:8px 0 2px">② 필요경비</div>`+
+    `<div class="itax-row indent"><span>매출원가 (COGS)</span><span style="${mn}">− ${won(annCogs)}</span></div>`+
+    `<div class="itax-row indent sub-end"><span>배송원가 (Shipping)</span><span style="${mn}">− ${won(annShip)}</span></div>`+
+    catRows+
+    `<div class="itax-row sub-end"><span>필요경비 합계</span><span style="${mn}">− ${won(annCost)}</span></div>`+
+    `<div class="itax-row" style="font-weight:700;font-size:13px;padding-top:8px"><span>③ 사업소득금액 ①−②</span><span style="${mn};color:${annProfit>=0?'var(--accent)':'var(--red)'}">${won(annProfit)}</span></div>`+
+    `<div class="itax-row" style="padding-top:8px"><span>적용세율 구간</span><span style="font-size:11px;color:var(--text2)">${taxLabel}</span></div>`+
+    `<div class="itax-row" style="font-weight:700;color:var(--accent)"><span>추정 소득세</span><span style="${mn}">${won(Math.max(0,taxAmt))}</span></div>`+
+    `<div class="itax-row"><span>지방소득세 (소득세×10%)</span><span style="${mn};color:var(--text2)">${won(Math.max(0,Math.round(taxAmt*0.1)))}</span></div>`+
+    `<div class="tax-note">※ 인적공제·특별공제 등 미반영 추정값입니다. 실제 신고 시 달라질 수 있으니 세무사 상담 권장.</div>`;
 
-  // Expense list for selected month
-  const filtered=moExp.sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('expense-table').innerHTML=filtered.length?filtered.map(e=>
-    `<tr><td class="mono">${e.date}</td><td>${expTypeBadge(e.type)}</td><td class="mono"><strong>${won(e.amount)}</strong></td><td style="color:var(--text2)">${e.note||'—'}</td><td><button class="btn btn-xs btn-d" onclick="deleteExpense(${e.id})">Del</button></td></tr>`
-  ).join(''):'<tr><td colspan="5" class="empty">No expenses this month — click "Add Expense" to record</td></tr>';
+  /* ── 연간 지출 명세 ── */
+  const sortedExps=[...yExps].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('expense-table').innerHTML=sortedExps.length?
+    sortedExps.map(e=>`<tr><td class="mono">${e.date}</td><td>${expTypeBadge(e.type)}</td><td style="font-family:'DM Mono',monospace;text-align:right"><strong>${won(e.amount)}</strong></td><td style="color:var(--text2)">${e.note||'—'}</td><td><button class="btn btn-xs btn-d" onclick="deleteExpense(${e.id})">Del</button></td></tr>`).join(''):
+    '<tr><td colspan="5" class="empty">지출 내역이 없습니다</td></tr>';
 }
 
 /* ── RENDER: INVOICES ──────────────────────────────────────────────────── */
@@ -2252,9 +2296,9 @@ function detSales(type){
   showStatDetail(title,titleKo,`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">${type==='cost'?'Cost':type==='profit'?'Profit':'Amount'}</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No orders</td></tr>'}</tbody></table>`);
 }
 function detFin(type){
-  const month=document.getElementById('fin-month')?.value||nowYM();
-  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
-  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(month));
+  const year=document.getElementById('fin-year')?.value||String(new Date().getFullYear());
+  const mo=orders.filter(o=>o.date&&o.date.startsWith(year));
+  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(year));
   let html,title,titleKo;
   if(type==='rev'){
     title='Revenue Detail';titleKo='매출 상세';
@@ -2359,23 +2403,47 @@ function dlSales(){
   toast('✓ Downloaded: Sales & Billing');
 }
 function dlFinance(){
-  const month=document.getElementById('fin-month')?.value||nowYM();
-  const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
-  const moExp=expenses.filter(e=>e.date&&e.date.startsWith(month));
-  const revenue=mo.reduce((s,o)=>s+Number(o.charge),0);
-  const cogs=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
-  const expTotal=moExp.reduce((s,e)=>s+Number(e.amount),0);
+  const year=document.getElementById('fin-year')?.value||String(new Date().getFullYear());
+  const yOrds=orders.filter(o=>o.date&&o.date.startsWith(year));
+  const yExps=expenses.filter(e=>e.date&&e.date.startsWith(year));
+  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0);
+  const annCogs=yOrds.reduce((s,o)=>s+Number(o.cost||0),0);
+  const annShip=yOrds.reduce((s,o)=>s+Number(o.shippingCost||0),0);
+  const annExp=yExps.reduce((s,e)=>s+Number(e.amount),0);
+  const annProfit=annRev-annCogs-annShip-annExp;
+  // 월별 P&L
+  const monthly=[];
+  for(let m=1;m<=12;m++){
+    const ym=`${year}-${String(m).padStart(2,'0')}`;
+    const mO=orders.filter(o=>o.date&&o.date.startsWith(ym));
+    const mE=expenses.filter(e=>e.date&&e.date.startsWith(ym));
+    const r=mO.reduce((s,o)=>s+Number(o.charge),0);
+    const c=mO.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
+    const ex=mE.reduce((s,e)=>s+Number(e.amount),0);
+    monthly.push({'월':`${m}월`,'매출(₩)':r,'원가+배송(₩)':c,'경비(₩)':ex,'순이익(₩)':r-c-ex});
+  }
+  monthly.push({'월':'합계','매출(₩)':annRev,'원가+배송(₩)':annCogs+annShip,'경비(₩)':annExp,'순이익(₩)':annProfit});
+  // 부가세
+  const vatData=['01','02','03','04','05','06','07','08','09','10','11','12'].reduce((acc,mm,i)=>{
+    const qi=i<6?0:1;
+    acc[qi]=acc[qi]||{과세기간:i<6?'1기 상반기(1~6월)':'2기 하반기(7~12월)','공급대가(₩)':0};
+    acc[qi]['공급대가(₩)']+=orders.filter(o=>o.date&&o.date.startsWith(year)&&o.date.slice(5,7)===mm).reduce((s,o)=>s+Number(o.charge),0);
+    return acc;
+  },[]).map(r=>({...r,'공급가액(₩)':Math.round(r['공급대가(₩)']/1.1),'매출세액(₩)':r['공급대가(₩)']-Math.round(r['공급대가(₩)']/1.1)}));
   xlsxDownload([
-    {name:'P&L Summary',data:[
-      {Item:'Revenue (매출)',Amount:revenue},
-      {Item:'Cost of Goods (원가+배송비)',Amount:-cogs},
-      {Item:'Business Expenses (경비)',Amount:-expTotal},
-      {Item:'Net Profit (순이익)',Amount:revenue-cogs-expTotal},
+    {name:'연간요약 Annual Summary',data:[
+      {'항목':'수입금액 (총매출)','금액(₩)':annRev},
+      {'항목':'매출원가 (COGS)','금액(₩)':-annCogs},
+      {'항목':'배송원가','금액(₩)':-annShip},
+      {'항목':'사업경비','금액(₩)':-annExp},
+      {'항목':'순이익 Net Profit','금액(₩)':annProfit},
     ]},
-    {name:'Expenses',data:moExp.map(e=>({Date:e.date,Type:e.type,'Amount(₩)':e.amount,Note:e.note||''}))},
-    {name:'Orders',data:mo.map(o=>{const c=getC(o.customerId);return{Date:o.date,Customer:c?c.name:'?',Item:o.desc,'Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge}})},
-  ],`shanes-finance-${month}.xlsx`);
-  toast('✓ Downloaded: Finance & Tax');
+    {name:'월별손익 Monthly PL',data:monthly},
+    {name:'부가세 VAT',data:vatData},
+    {name:'지출명세 Expenses',data:yExps.map(e=>({'날짜':e.date,'구분':e.type,'금액(₩)':e.amount,'메모':e.note||''}))},
+    {name:'매출명세 Orders',data:yOrds.map(o=>{const c=getC(o.customerId);return{'날짜':o.date,'고객':c?c.name:'?','내용':o.desc,'유형':o.type,'원가(₩)':Number(o.cost||0),'배송(₩)':Number(o.shippingCost||0),'청구(₩)':o.charge,'결제':o.payment};})},
+  ],`shanes-tax-ledger-${year}.xlsx`);
+  toast('✓ Downloaded: Tax Ledger '+year);
 }
 function dlCustomers(){
   xlsxDownload([
