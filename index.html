@@ -533,9 +533,6 @@ tr:hover td{background:var(--bg)}
     <div id="proxy-lines"></div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Shipping (₩)</span></label><input type="number" id="o-ship" placeholder="0"></div>
-      <div class="field" style="flex:1;margin-bottom:12px"><label><span class="lk">Proxy Status</span></label>
-        <select id="o-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select>
-      </div>
     </div>
   </div>
   <hr class="divider">
@@ -569,7 +566,6 @@ tr:hover td{background:var(--bg)}
   <div style="display:flex;gap:10px">
     <div class="field" style="flex:1"><label><span class="lk">Payment</span></label><select id="eo-payment"><option value="credit">On Credit</option><option value="cash">Cash</option><option value="transfer">Bank Transfer</option></select></div>
     <div class="field" style="flex:1" id="eo-platform-wrap"><label><span class="lk">Platform</span></label><select id="eo-platform"><option value="">—</option><option value="coupang">Coupang</option><option value="naver">Naver</option><option value="nsmall">NS Mall</option><option value="ably">Ably</option><option value="domeggook">Domeggook</option><option value="other">Other</option></select></div>
-    <div class="field" style="flex:1" id="eo-status-wrap"><label><span class="lk">Proxy Status</span></label><select id="eo-proxy-status"><option value="pending">Pending</option><option value="done">Done</option></select></div>
   </div>
   <div class="field"><label><span class="lk">Note</span></label><input type="text" id="eo-note"></div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-edit-order')">Cancel</button><button class="btn btn-p" onclick="saveEditOrder()">Update</button></div>
@@ -891,9 +887,6 @@ function sBadge(o){
     const settled=!!settlements[`${o.customerId}-${(o.date||'').slice(0,7)}`];
     return settled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>';
   }
-  // 현금 결제 proxy → 배송 상태 표시
-  if(o.type==='proxy')return o.proxyStatus==='done'?'<span class="badge bg-green"><span class="bk">Done</span><span class="be">완료</span></span>':'<span class="badge bg-amber"><span class="bk">Pending</span><span class="be">미처리</span></span>';
-  // 현금 결제 stock
   return'<span class="badge bg-green"><span class="bk">Paid</span><span class="be">결제완료</span></span>';
 }
 function pBadge(p){
@@ -1195,7 +1188,7 @@ async function saveOrder(){
        shippingCost:Number(document.getElementById('o-ship').value),
        charge:items.reduce((s,i)=>s+i.charge,0),
        payment:document.getElementById('o-payment').value,
-       proxyStatus:document.getElementById('o-proxy-status').value};
+       proxyStatus:'done'};
   }
   orders.push(o);LS.set('orders',orders);
   if(o.payment==='credit')recalcCustomerOutstanding(custId);
@@ -1581,12 +1574,10 @@ function openEditOrder(id){
   document.getElementById('eo-charge').value=o.charge||0;
   document.getElementById('eo-payment').value=o.payment||'credit';
   document.getElementById('eo-platform').value=o.platform||'';
-  document.getElementById('eo-proxy-status').value=o.proxyStatus||'pending';
   document.getElementById('eo-note').value=o.note||'';
   const isProxy=o.type==='proxy';
   document.getElementById('eo-proxy-fields').style.display=isProxy?'block':'none';
   document.getElementById('eo-platform-wrap').style.display=isProxy?'block':'none';
-  document.getElementById('eo-status-wrap').style.display=isProxy?'block':'none';
   document.getElementById('modal-edit-order').dataset.editId=id;
   document.getElementById('overlay-edit-order').classList.add('open');
   document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
@@ -1605,7 +1596,6 @@ async function saveEditOrder(){
   o.shippingCost=Number(document.getElementById('eo-ship').value)||0;
   o.charge=newCharge;o.payment=newPayment;
   o.platform=document.getElementById('eo-platform').value;
-  o.proxyStatus=document.getElementById('eo-proxy-status').value;
   o.note=document.getElementById('eo-note').value;
   /* adjust outstanding — handle customer change */
   if(oldCustId!=newCustId){
@@ -1692,7 +1682,6 @@ async function recalcCustomerOutstanding(cid){
   await updateRow('Customers',cid,{outstanding:c.outstanding});
 }
 
-function toggleProxy(id){const o=orders.find(x=>x.id==id);if(!o)return;o.proxyStatus=o.proxyStatus==='done'?'pending':'done';LS.set('orders',orders);toast(o.proxyStatus==='done'?'✓ Done':'Marked pending');renderOrders();renderDash();updateRow('Orders',id,{proxyStatus:o.proxyStatus});}
 
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
 function renderDash(){
@@ -2342,7 +2331,6 @@ function detSales(type){
   let list=filtered,title,titleKo;
   if(type==='cost'){title='Cost Breakdown';titleKo='원가 내역';}
   else if(type==='profit'){title='Gross Profit Detail';titleKo='총 이익 내역';}
-  else if(type==='proxy'){list=filtered.filter(o=>o.type==='proxy'&&o.proxyStatus==='pending');title='Pending Proxy';titleKo='대행 미처리 목록';}
   else{title='Billed Orders';titleKo='청구 내역';}
   const rows=list.map(o=>{const c=getC(o.customerId);const cost=Number(o.cost||0)+Number(o.shippingCost||0);const profit=Number(o.charge)-cost;return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td>${o.desc||'—'}</td><td class="mono r">${type==='cost'?won(cost):type==='profit'?`<span style="color:${profit>=0?'var(--green)':'var(--red)'}">${won(profit)}</span>`:won(o.charge)}</td></tr>`;}).join('');
   showStatDetail(title,titleKo,`<table class="det-tbl"><thead><tr><th>Date</th><th>Customer</th><th>Description</th><th class="r">${type==='cost'?'Cost':type==='profit'?'Profit':'Amount'}</th></tr></thead><tbody>${rows||'<tr><td colspan=4 class=empty>No orders</td></tr>'}</tbody></table>`);
@@ -2425,7 +2413,7 @@ function ordersFlat(){
     return{Date:o.date,Customer:c?c.name:'?',Type:o.type,Item:o.desc,Platform:o.platform||'',
       OrderNo:o.receiptNo||'',Qty:o.qty,'Cost(₩)':o.cost,'Shipping(₩)':o.shippingCost||0,
       'Charged(₩)':o.charge,'Profit(₩)':Number(o.charge)-Number(o.cost||0)-Number(o.shippingCost||0),
-      Payment:o.payment,ProxyStatus:o.proxyStatus||'',Note:o.note||''};
+      Payment:o.payment,Note:o.note||''};
   });
 }
 function dlAll(){
@@ -2450,7 +2438,7 @@ function dlSales(){
   const month=document.getElementById('month-filter')?.value||nowYM();
   const filtered=orders.filter(o=>o.date&&o.date.startsWith(month));
   xlsxDownload([
-    {name:'Orders',data:filtered.length?filtered.map(o=>{const c=getC(o.customerId);return{Date:o.date,Customer:c?c.name:'?',Item:o.desc,Type:o.type,Platform:o.platform||'',OrderNo:o.receiptNo||'',Qty:o.qty,'Cost(₩)':o.cost,'Shipping(₩)':o.shippingCost||0,'Charged(₩)':o.charge,'Profit(₩)':Number(o.charge)-Number(o.cost||0)-Number(o.shippingCost||0),Payment:o.payment,Status:o.proxyStatus||'',Note:o.note||''}}):[]},
+    {name:'Orders',data:filtered.length?filtered.map(o=>{const c=getC(o.customerId);return{Date:o.date,Customer:c?c.name:'?',Item:o.desc,Type:o.type,Platform:o.platform||'',OrderNo:o.receiptNo||'',Qty:o.qty,'Cost(₩)':o.cost,'Shipping(₩)':o.shippingCost||0,'Charged(₩)':o.charge,'Profit(₩)':Number(o.charge)-Number(o.cost||0)-Number(o.shippingCost||0),Payment:o.payment,Note:o.note||''}}):[]},
   ],`shanes-sales-${month}.xlsx`);
   toast('✓ Downloaded: Sales & Billing');
 }
@@ -2514,7 +2502,7 @@ function dlInvoices(){
     const cOrders=mo.filter(o=>o.customerId==c.id);
     if(!cOrders.length)return;
     cOrders.forEach(o=>{
-      rows.push({Month:month,Customer:c.name,Contact:c.contact||'',Address:(c.address||'')+(c.address2?' '+c.address2:''),Date:o.date,Item:o.desc,Type:o.type,'Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge,Payment:o.payment,Status:o.proxyStatus||''});
+      rows.push({Month:month,Customer:c.name,Contact:c.contact||'',Address:(c.address||'')+(c.address2?' '+c.address2:''),Date:o.date,Item:o.desc,Type:o.type,'Cost(₩)':Number(o.cost||0)+Number(o.shippingCost||0),'Charged(₩)':o.charge,Payment:o.payment});
     });
     rows.push({Month:'',Customer:'',Contact:'',Address:'',Date:'',Item:'SUBTOTAL — '+c.name,Type:'','Cost(₩)':cOrders.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0),'Charged(₩)':cOrders.reduce((s,o)=>s+Number(o.charge),0),Payment:'',Status:''});
     rows.push({});
