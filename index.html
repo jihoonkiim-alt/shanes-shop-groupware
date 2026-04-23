@@ -982,7 +982,7 @@ function openModal(id){
     setOrderType('stock');
   }
   if(id==='modal-customer'){delete document.getElementById('modal-customer').dataset.editId;document.querySelector('#modal-customer .me').textContent='Add Customer';document.querySelector('#modal-customer .mk').textContent='고객 추가';['c-name','c-contact','c-address','c-address2','c-sns','c-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('c-type').value='retail';document.getElementById('c-payment').value='credit';document.getElementById('c-limit').value='0';}
-  if(id==='modal-product'){delete document.getElementById('modal-product').dataset.editId;document.getElementById('p-modal-title-e').textContent='Add Stock Product';document.getElementById('p-modal-title-k').textContent='재고 상품 추가';document.getElementById('p-save-btn').textContent='Save';document.getElementById('p-stock-field').style.display='';document.getElementById('p-cat').value='Body Care';['p-name','p-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('p-cost').value='0';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='0';document.getElementById('p-min').value='5';}
+  if(id==='modal-product'){delete document.getElementById('modal-product').dataset.editId;document.getElementById('p-modal-title-e').textContent='Add Stock Product';document.getElementById('p-modal-title-k').textContent='재고 상품 추가';document.getElementById('p-save-btn').textContent='Save';document.getElementById('p-stock-field').style.display='';document.getElementById('p-stock-field').querySelector('span.lk').textContent='Initial Stock / 초기 재고';document.getElementById('p-cat').value='Body Care';['p-name','p-note'].forEach(x=>document.getElementById(x).value='');document.getElementById('p-cost').value='0';document.getElementById('p-price').value='0';document.getElementById('p-stock').value='0';document.getElementById('p-min').value='5';}
   if(id==='modal-inout'){document.getElementById('io-date').value=nowDate();populateSel('io-product',products.map(p=>({v:p.id,l:p.name})))}
   if(id==='modal-event'){const nd=nowDate();document.getElementById('ev-date').value=nd;document.getElementById('ev-date-end').value=nd;document.getElementById('ev-time-toggle').checked=false;document.getElementById('ev-time').style.display='none';document.getElementById('ev-time').value='';document.getElementById('ev-recur').value='none';}
   if(id==='modal-expense')document.getElementById('exp-date').value=nowDate();
@@ -1206,7 +1206,9 @@ function openEditProduct(id){
   document.getElementById('p-modal-title-e').textContent='Edit Product';
   document.getElementById('p-modal-title-k').textContent='상품 수정';
   document.getElementById('p-save-btn').textContent='Update';
-  document.getElementById('p-stock-field').style.display='none';
+  document.getElementById('p-stock-field').style.display='';
+  document.getElementById('p-stock-field').querySelector('span.lk').textContent='Current Stock / 현재 재고';
+  document.getElementById('p-stock').value=p.stock||0;
   document.getElementById('p-name').value=p.name||'';
   document.getElementById('p-cat').value=p.cat||'Body Care';
   document.getElementById('p-cost').value=p.costPrice||0;
@@ -1225,11 +1227,12 @@ async function saveProduct(){
     p.name=name;p.cat=document.getElementById('p-cat').value;
     p.costPrice=Number(document.getElementById('p-cost').value)||0;
     p.price=Number(document.getElementById('p-price').value);
+    p.stock=Number(document.getElementById('p-stock').value)||0;
     p.minStock=Number(document.getElementById('p-min').value);
     p.note=document.getElementById('p-note').value;
     LS.set('products',products);
     closeModal('modal-product');toast('✓ Product updated');renderInventory();renderDash();
-    updateRow('Products',editId,{name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,minStock:p.minStock,note:p.note});
+    updateRow('Products',editId,{name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
   }else{
     const p={id:newId(products),name,cat:document.getElementById('p-cat').value,
       costPrice:Number(document.getElementById('p-cost').value)||0,
