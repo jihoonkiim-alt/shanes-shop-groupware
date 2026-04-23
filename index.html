@@ -1152,6 +1152,7 @@ async function saveOrder(){
   const date=document.getElementById('o-date').value;
   if(!date){alert('Date is required.');return}
   let o={id:newId(orders),date,customerId:custId,type:otype,note:document.getElementById('o-note').value};
+  const gasJobs=[];
   if(otype==='stock'){
     const lines=[...document.querySelectorAll('#stock-lines .order-line')];
     const items=lines.map(l=>({pid:l.querySelector('.ol-product').value,qty:Number(l.querySelector('.ol-qty').value)||1,unit:Number(l.querySelector('.ol-unit').value)||0})).filter(i=>i.pid);
@@ -1167,11 +1168,12 @@ async function saveOrder(){
        items:items.map(i=>({pid:i.pid,qty:i.qty}))};
     for(const item of items){
       const p=getP(item.pid);
-      if(p){p.stock=Number(p.stock)-item.qty;LS.set('products',products);await updateRow('Products',item.pid,{stock:p.stock})}
+      if(p){p.stock=Number(p.stock)-item.qty;gasJobs.push(()=>updateRow('Products',item.pid,{stock:p.stock}));}
       const io={id:newId(inouts),date,productId:item.pid,type:'out',qty:item.qty,note:'Sale',orderId:o.id};
-      inouts.push(io);LS.set('inouts',inouts);
-      await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note,orderId:o.id});
+      inouts.push(io);
+      gasJobs.push(()=>pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note,orderId:o.id}));
     }
+    LS.set('products',products);LS.set('inouts',inouts);
   }else{
     const lines=[...document.querySelectorAll('#proxy-lines .order-line')];
     const items=lines.map(l=>({desc:l.querySelector('.ol-desc').value.trim(),cost:Number(l.querySelector('.ol-cost').value)||0,charge:Number(l.querySelector('.ol-charge').value)||0,platform:l.querySelector('.ol-platform').value})).filter(i=>i.desc||i.charge);
@@ -1189,12 +1191,12 @@ async function saveOrder(){
        proxyStatus:document.getElementById('o-proxy-status').value};
   }
   orders.push(o);LS.set('orders',orders);
-  if(o.payment==='credit')await recalcCustomerOutstanding(custId);
-  await pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId||'',
+  if(o.payment==='credit')recalcCustomerOutstanding(custId);
+  closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
+  Promise.all([...gasJobs.map(fn=>fn()),pushRow('Orders',{id:o.id,date:o.date,customerId:o.customerId,type:o.type,productId:o.productId||'',
     qty:o.qty,cost:o.cost,shippingCost:o.shippingCost||0,charge:o.charge,platform:o.platform||'',
     receiptNo:o.receiptNo||'',payment:o.payment,proxyStatus:o.proxyStatus,desc:o.desc,note:o.note,url:o.url||'',
-    items:o.items?JSON.stringify(o.items):''});
-  closeModal('modal-order');toast('✓ Order saved');renderDash();renderOrders();renderInvoices();renderCalendar();renderInventory();
+    items:o.items?JSON.stringify(o.items):''})]);
 }
 
 /* ── PRODUCT ───────────────────────────────────────────────────────────── */
@@ -1226,8 +1228,8 @@ async function saveProduct(){
     p.minStock=Number(document.getElementById('p-min').value);
     p.note=document.getElementById('p-note').value;
     LS.set('products',products);
-    await updateRow('Products',editId,{name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,minStock:p.minStock,note:p.note});
     closeModal('modal-product');toast('✓ Product updated');renderInventory();renderDash();
+    updateRow('Products',editId,{name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,minStock:p.minStock,note:p.note});
   }else{
     const p={id:newId(products),name,cat:document.getElementById('p-cat').value,
       costPrice:Number(document.getElementById('p-cost').value)||0,
@@ -1236,8 +1238,8 @@ async function saveProduct(){
       minStock:Number(document.getElementById('p-min').value),
       note:document.getElementById('p-note').value};
     products.push(p);LS.set('products',products);
-    await pushRow('Products',{id:p.id,name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
     closeModal('modal-product');toast('✓ Product added');renderInventory();renderDash();
+    pushRow('Products',{id:p.id,name:p.name,cat:p.cat,costPrice:p.costPrice,price:p.price,stock:p.stock,minStock:p.minStock,note:p.note});
   }
 }
 
@@ -1251,17 +1253,18 @@ async function saveInout(){
   const date=document.getElementById('io-date').value;
   if(!date){alert('Date is required.');return}
   const p=getP(pid);
+  let stockJob=null;
   if(p){
     if(type==='in')p.stock=Number(p.stock)+qty;
     else if(type==='out')p.stock=Math.max(0,Number(p.stock)-qty);
     else p.stock=qty;
     LS.set('products',products);
-    await updateRow('Products',pid,{stock:p.stock});
+    stockJob=()=>updateRow('Products',pid,{stock:p.stock});
   }
   const io={id:newId(inouts),date,productId:pid,type,qty,note:document.getElementById('io-note').value};
   inouts.push(io);LS.set('inouts',inouts);
-  await pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note});
   closeModal('modal-inout');toast('✓ Movement saved');renderInventory();renderDash();
+  Promise.all([stockJob&&stockJob(),pushRow('StockMovements',{id:io.id,date:io.date,productId:io.productId,type:io.type,qty:io.qty,note:io.note})].filter(Boolean));
 }
 async function deleteInout(id){
   if(!confirm('Delete this movement?'))return;
@@ -1302,6 +1305,7 @@ async function saveEditInout(){
   const newType=document.getElementById('eio-type').value;
   const newQty=Number(document.getElementById('eio-qty').value)||1;
   const p=getP(io.productId);
+  let stockJob2=null;
   if(p){
     if(oldType==='in')p.stock=Math.max(0,Number(p.stock)-oldQty);
     else if(oldType==='out')p.stock=Number(p.stock)+oldQty;
@@ -1309,13 +1313,13 @@ async function saveEditInout(){
     else if(newType==='out')p.stock=Math.max(0,Number(p.stock)-newQty);
     else p.stock=newQty;
     LS.set('products',products);
-    await updateRow('Products',io.productId,{stock:p.stock});
+    stockJob2=()=>updateRow('Products',io.productId,{stock:p.stock});
   }
   io.date=document.getElementById('eio-date').value;
   io.type=newType;io.qty=newQty;io.note=document.getElementById('eio-note').value;
   LS.set('inouts',inouts);
-  await updateRow('StockMovements',id,{date:io.date,type:io.type,qty:io.qty,note:io.note});
   closeModal('modal-edit-inout');toast('✓ Updated');renderInventory();renderDash();
+  Promise.all([stockJob2&&stockJob2(),updateRow('StockMovements',id,{date:io.date,type:io.type,qty:io.qty,note:io.note})].filter(Boolean));
 }
 
 /* ── CUSTOMER ──────────────────────────────────────────────────────────── */
@@ -1331,8 +1335,8 @@ async function saveCustomer(){
     c.type=document.getElementById('c-type').value;c.creditLimit=Number(document.getElementById('c-limit').value)||0;
     c.payment=document.getElementById('c-payment').value;c.note=document.getElementById('c-note').value;
     LS.set('customers',customers);
-    await updateRow('Customers',c.id,{name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note});
     closeModal('modal-customer');toast('✓ Customer updated');renderCustomers('');renderDash();renderInvoices();
+    updateRow('Customers',c.id,{name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note});
   } else {
     const c={id:newId(customers),name,
       contact:document.getElementById('c-contact').value,
@@ -1345,9 +1349,9 @@ async function saveCustomer(){
       note:document.getElementById('c-note').value,
       outstanding:0};
     customers.push(c);LS.set('customers',customers);
-    await pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
-      type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
     closeModal('modal-customer');toast('✓ Customer added');renderCustomers('');renderDash();renderInvoices();
+    pushRow('Customers',{id:c.id,name:c.name,contact:c.contact,address:c.address,address2:c.address2||'',sns:c.sns,
+      type:c.type,creditLimit:c.creditLimit,payment:c.payment,note:c.note,outstanding:c.outstanding});
   }
 }
 
@@ -1362,8 +1366,8 @@ async function saveEvent(){
   const recur=document.getElementById('ev-recur').value;
   const ev={id:newId(events),date,dateEnd:dateEnd>=date?dateEnd:date,ko:document.getElementById('ev-ko').value,en,type:document.getElementById('ev-type').value,time:evTime,recur};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.dateEnd,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time,recur:ev.recur});
   closeModal('modal-event');toast('✓ Event added');renderCalendar();
+  pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.dateEnd,ko:ev.ko,en:ev.en,type:ev.type,time:ev.time,recur:ev.recur});
 }
 
 /* ── EXPENSE ───────────────────────────────────────────────────────────── */
@@ -1373,8 +1377,8 @@ async function saveExpense(){
   if(!date||!amount){alert('Date and amount required.');return}
   const exp={id:newId(expenses),date,type:document.getElementById('exp-type').value,amount,note:document.getElementById('exp-note').value};
   expenses.push(exp);LS.set('expenses',expenses);
-  await pushRow('Expenses',{id:exp.id,date:exp.date,type:exp.type,amount:exp.amount,note:exp.note});
   closeModal('modal-expense');toast('✓ Expense saved');renderFinance();renderDash();
+  pushRow('Expenses',{id:exp.id,date:exp.date,type:exp.type,amount:exp.amount,note:exp.note});
 }
 
 /* ── SETTLE / DELETE ───────────────────────────────────────────────────── */
@@ -1383,11 +1387,10 @@ async function settleCredit(cid){
   const amt=c.outstanding;
   if(!confirm(`Settle ${won(amt)} outstanding for ${c.name}?`))return;
   c.outstanding=0;LS.set('customers',customers);
-  await updateRow('Customers',cid,{outstanding:0});
   const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료 ${won(amt)}`,en:`Settlement — ${c.name} ${won(amt)}`,type:'billing'};
   events.push(ev);LS.set('events',events);
-  await pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:'',recur:'none'});
   toast('✓ Settlement recorded');renderCustomers('');
+  Promise.all([updateRow('Customers',cid,{outstanding:0}),pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:'',recur:'none'})]);
 }
 /* ── ORDER IMPORT (XLSX) ────────────────────────────────────────────────── */
 function importOrdersXLSX(input){
@@ -1589,14 +1592,14 @@ async function saveEditOrder(){
   o.note=document.getElementById('eo-note').value;
   /* adjust outstanding — handle customer change */
   if(oldCustId!=newCustId){
-    if(oldPayment==='credit')await recalcCustomerOutstanding(oldCustId);
-    if(newPayment==='credit')await recalcCustomerOutstanding(newCustId);
+    if(oldPayment==='credit')recalcCustomerOutstanding(oldCustId);
+    if(newPayment==='credit')recalcCustomerOutstanding(newCustId);
   }else if(oldPayment==='credit'||newPayment==='credit'){
-    await recalcCustomerOutstanding(o.customerId);
+    recalcCustomerOutstanding(o.customerId);
   }
   LS.set('orders',orders);
-  await updateRow('Orders',id,{date:o.date,customerId:o.customerId,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
   closeModal('modal-edit-order');toast('✓ Order updated');renderDash();renderOrders();renderInvoices();renderCalendar();
+  updateRow('Orders',id,{date:o.date,customerId:o.customerId,desc:o.desc,cost:o.cost,shippingCost:o.shippingCost,charge:o.charge,payment:o.payment,platform:o.platform,proxyStatus:o.proxyStatus,note:o.note});
 }
 async function deleteOrder(id){
   if(!confirm('Delete this order?'))return;
@@ -1664,7 +1667,7 @@ async function recalcCustomerOutstanding(cid){
   await updateRow('Customers',cid,{outstanding:c.outstanding});
 }
 
-async function toggleProxy(id){const o=orders.find(x=>x.id==id);if(!o)return;o.proxyStatus=o.proxyStatus==='done'?'pending':'done';LS.set('orders',orders);await updateRow('Orders',id,{proxyStatus:o.proxyStatus});toast(o.proxyStatus==='done'?'✓ Done':'Marked pending');renderOrders();renderDash()}
+function toggleProxy(id){const o=orders.find(x=>x.id==id);if(!o)return;o.proxyStatus=o.proxyStatus==='done'?'pending':'done';LS.set('orders',orders);toast(o.proxyStatus==='done'?'✓ Done':'Marked pending');renderOrders();renderDash();updateRow('Orders',id,{proxyStatus:o.proxyStatus});}
 
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
 function renderDash(){
