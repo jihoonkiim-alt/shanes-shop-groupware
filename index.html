@@ -350,7 +350,7 @@ tr:hover td{background:var(--bg)}
 <div class="sec" id="tab-inventory">
   <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button><button class="btn" onclick="dlInventory()">⬇ .xlsx</button></div></div>
   <div class="stats" id="inv-stats"></div>
-  <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div><div class="inv-filter-bar"><button class="btn btn-xs inv-filter active" onclick="setInvFilter('all',this)">전체</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('in',this)">재고있음</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('out',this)">재고없음</button></div></div>
+  <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div><div class="inv-filter-bar"><button class="btn btn-xs inv-filter active" onclick="setInvFilter('all',this)">All</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('in',this)">In Stock</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('out',this)">Out of Stock</button></div></div>
     <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
   <div class="card" id="discontinued-card" style="display:none"><div class="ch"><div><div class="ce">Discontinued</div><div class="ck">단종 상품</div></div><span id="disc-count" style="font-size:11px;color:var(--text3)"></span></div>
     <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="discontinued-table"></tbody></table></div>
@@ -1756,13 +1756,13 @@ function renderInventory(){
   else if(invFilter==='out')filtered=activeP.filter(p=>Number(p.stock)===0);
   document.getElementById('product-table').innerHTML=filtered.length?filtered.map(p=>{
     const col=p.stock==0?'var(--red)':Number(p.stock)<=Number(p.minStock)?'var(--amber)':'var(--green)';
-    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">단종</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`;
+    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">Discontinue</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">해당 조건의 상품이 없습니다</td></tr>';
   const dc=document.getElementById('discontinued-card');
   if(discP.length){
     dc.style.display='';
     document.getElementById('disc-count').textContent=`${discP.length}개`;
-    document.getElementById('discontinued-table').innerHTML=discP.map(p=>`<tr class="disc-row"><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td style="white-space:nowrap"><button class="btn btn-xs btn-g" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">복원</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`).join('');
+    document.getElementById('discontinued-table').innerHTML=discP.map(p=>`<tr class="disc-row"><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td style="white-space:nowrap"><button class="btn btn-xs btn-g" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">Restore</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`).join('');
   }else{
     dc.style.display='none';
   }
@@ -1790,12 +1790,10 @@ function renderOrders(){
   const filtered=orders.filter(o=>(!month||o.date.startsWith(month))&&(!tf||o.type===tf));
   const rev=filtered.reduce((s,o)=>s+Number(o.charge),0);
   const cost=filtered.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
-  const pp=filtered.filter(o=>o.type==='proxy'&&o.proxyStatus==='pending').length;
   document.getElementById('sales-stats').innerHTML=
     `<div class="stat" onclick="detSales('billed')"><div class="sk">Total Billed</div><div class="se">청구액 합계</div><div class="sv green">${won(rev)}</div></div>`+
     `<div class="stat" onclick="detSales('cost')"><div class="sk">Total Cost</div><div class="se">원가 합계</div><div class="sv">${won(cost)}</div></div>`+
-    `<div class="stat" onclick="detSales('profit')"><div class="sk">Gross Profit</div><div class="se">총 이익</div><div class="sv ${rev-cost>=0?'green':'red'}">${won(rev-cost)}</div></div>`+
-    `<div class="stat" onclick="detSales('proxy')"><div class="sk">Pending Proxy</div><div class="se">대행 미처리</div><div class="sv ${pp>0?'amber':''}">${pp}</div></div>`;
+    `<div class="stat" onclick="detSales('profit')"><div class="sk">Gross Profit</div><div class="se">총 이익</div><div class="sv ${rev-cost>=0?'green':'red'}">${won(rev-cost)}</div></div>`;
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
