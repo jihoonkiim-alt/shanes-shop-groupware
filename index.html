@@ -877,6 +877,9 @@ function nowDate(){return new Date().toISOString().slice(0,10)}
 function getC(id){return customers.find(c=>String(c.id)===String(id))}
 function getP(id){return products.find(p=>String(p.id)===String(id))}
 function thisMO(){return orders.filter(o=>o.date&&o.date.startsWith(nowYM()))}
+function extraRevForPeriod(prefix){
+  return Object.entries(invExtras).reduce((s,[k,v])=>{const m=k.slice(-7);return m.startsWith(prefix)?s+Number(v||0):s;},0);
+}
 function newId(arr){return arr.length?Math.max(...arr.map(x=>Number(x.id)||0))+1:1}
 function won(n){return Number(n||0).toLocaleString('ko-KR')+'원'}
 function populateSel(id,opts){document.getElementById(id).innerHTML='<option value="">Select...</option>'+opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}
@@ -1686,7 +1689,7 @@ async function recalcCustomerOutstanding(cid){
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
 function renderDash(){
   const mo=thisMO();
-  const rev=mo.reduce((s,o)=>s+Number(o.charge),0);
+  const rev=mo.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(nowYM());
   const pc=mo.filter(o=>o.type==='proxy').length;
   const sc=mo.filter(o=>o.type==='stock').length;
   const out=customers.reduce((s,c)=>s+Number(c.outstanding||0),0);
@@ -1777,7 +1780,8 @@ function renderOrders(){
   const month=document.getElementById('month-filter').value;
   const tf=document.getElementById('type-filter').value;
   const filtered=orders.filter(o=>(!month||o.date.startsWith(month))&&(!tf||o.type===tf));
-  const rev=filtered.reduce((s,o)=>s+Number(o.charge),0);
+  const extraRev=month?extraRevForPeriod(month):Object.values(invExtras).reduce((s,v)=>s+Number(v||0),0);
+  const rev=filtered.reduce((s,o)=>s+Number(o.charge),0)+extraRev;
   const cost=filtered.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
   document.getElementById('sales-stats').innerHTML=
     `<div class="stat" onclick="detSales('billed')"><div class="sk">Total Billed</div><div class="se">청구액 합계</div><div class="sv green">${won(rev)}</div></div>`+
@@ -1806,7 +1810,7 @@ function renderFinance(){
   const year=sel.value||String(new Date().getFullYear());
   const yOrds=orders.filter(o=>o.date&&o.date.startsWith(year));
   const yExps=expenses.filter(e=>e.date&&e.date.startsWith(year));
-  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0);
+  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(year);
   const annCogs=yOrds.reduce((s,o)=>s+Number(o.cost||0),0);
   const annShip=yOrds.reduce((s,o)=>s+Number(o.shippingCost||0),0);
   const annExp=yExps.reduce((s,e)=>s+Number(e.amount),0);
@@ -1848,7 +1852,7 @@ function renderFinance(){
   const vatPeriods=[{q:'1기',label:'상반기 (1~6월)',mm:['01','02','03','04','05','06']},{q:'2기',label:'하반기 (7~12월)',mm:['07','08','09','10','11','12']}];
   let vatRows='';
   vatPeriods.forEach(p=>{
-    const r=orders.filter(o=>o.date&&o.date.startsWith(year)&&p.mm.includes(o.date.slice(5,7))).reduce((s,o)=>s+Number(o.charge),0);
+    const r=orders.filter(o=>o.date&&o.date.startsWith(year)&&p.mm.includes(o.date.slice(5,7))).reduce((s,o)=>s+Number(o.charge),0)+p.mm.reduce((s,mm)=>s+extraRevForPeriod(`${year}-${mm}`),0);
     const sv=Math.round(r/1.1);const vt=r-sv;
     vatRows+=`<tr><td style="font-size:11px">${p.q} ${p.label}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(r)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(sv)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(vt)}</td></tr>`;
   });
@@ -2446,7 +2450,7 @@ function dlFinance(){
   const year=document.getElementById('fin-year')?.value||String(new Date().getFullYear());
   const yOrds=orders.filter(o=>o.date&&o.date.startsWith(year));
   const yExps=expenses.filter(e=>e.date&&e.date.startsWith(year));
-  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0);
+  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(year);
   const annCogs=yOrds.reduce((s,o)=>s+Number(o.cost||0),0);
   const annShip=yOrds.reduce((s,o)=>s+Number(o.shippingCost||0),0);
   const annExp=yExps.reduce((s,e)=>s+Number(e.amount),0);
@@ -2457,7 +2461,7 @@ function dlFinance(){
     const ym=`${year}-${String(m).padStart(2,'0')}`;
     const mO=orders.filter(o=>o.date&&o.date.startsWith(ym));
     const mE=expenses.filter(e=>e.date&&e.date.startsWith(ym));
-    const r=mO.reduce((s,o)=>s+Number(o.charge),0);
+    const r=mO.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(ym);
     const c=mO.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
     const ex=mE.reduce((s,e)=>s+Number(e.amount),0);
     monthly.push({'월':`${m}월`,'매출(₩)':r,'원가+배송(₩)':c,'경비(₩)':ex,'순이익(₩)':r-c-ex});
@@ -2467,7 +2471,7 @@ function dlFinance(){
   const vatData=['01','02','03','04','05','06','07','08','09','10','11','12'].reduce((acc,mm,i)=>{
     const qi=i<6?0:1;
     acc[qi]=acc[qi]||{과세기간:i<6?'1기 상반기(1~6월)':'2기 하반기(7~12월)','공급대가(₩)':0};
-    acc[qi]['공급대가(₩)']+=orders.filter(o=>o.date&&o.date.startsWith(year)&&o.date.slice(5,7)===mm).reduce((s,o)=>s+Number(o.charge),0);
+    acc[qi]['공급대가(₩)']+=orders.filter(o=>o.date&&o.date.startsWith(year)&&o.date.slice(5,7)===mm).reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(`${year}-${mm}`);
     return acc;
   },[]).map(r=>({...r,'공급가액(₩)':Math.round(r['공급대가(₩)']/1.1),'매출세액(₩)':r['공급대가(₩)']-Math.round(r['공급대가(₩)']/1.1)}));
   xlsxDownload([
