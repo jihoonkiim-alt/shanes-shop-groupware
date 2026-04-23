@@ -183,6 +183,10 @@ tr:hover td{background:var(--bg)}
 .itax-row:last-child{border-bottom:none}.itax-row.indent{padding-left:14px;color:var(--text2);font-size:11px}
 .itax-row.sub-end{border-bottom:2px solid var(--border2);margin-bottom:2px}
 .tax-note{font-size:10px;color:var(--text3);line-height:1.6;margin-top:10px;padding:8px 10px;background:var(--bg);border-radius:6px}
+.inv-filter-bar{display:flex;gap:5px}
+.inv-filter{background:var(--bg2);color:var(--text2);border:1px solid var(--border)!important}
+.inv-filter.active{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+.disc-row td{opacity:0.55;text-decoration:line-through}
 
 /* CALENDAR */
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
@@ -346,8 +350,10 @@ tr:hover td{background:var(--bg)}
 <div class="sec" id="tab-inventory">
   <div class="ph"><div><div class="pte">Inventory Management</div><div class="ptk">재고 관리</div></div><div class="btn-row"><button class="btn" onclick="openModal('modal-product')">+ Add Product</button><button class="btn btn-p" onclick="openModal('modal-inout')">+ Stock Movement</button><button class="btn" onclick="dlInventory()">⬇ .xlsx</button></div></div>
   <div class="stats" id="inv-stats"></div>
-  <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div></div>
+  <div class="card"><div class="ch"><div><div class="ce">Stock Products</div><div class="ck">재고 상품 목록</div></div><div class="inv-filter-bar"><button class="btn btn-xs inv-filter active" onclick="setInvFilter('all',this)">전체</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('in',this)">재고있음</button><button class="btn btn-xs inv-filter" onclick="setInvFilter('out',this)">재고없음</button></div></div>
     <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="product-table"></tbody></table></div>
+  <div class="card" id="discontinued-card" style="display:none"><div class="ch"><div><div class="ce">Discontinued</div><div class="ck">단종 상품</div></div><span id="disc-count" style="font-size:11px;color:var(--text3)"></span></div>
+    <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Category</span><span class="tk">카테고리</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Selling</span><span class="tk">판매가</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="discontinued-table"></tbody></table></div>
   <div class="card"><div class="ch"><div><div class="ce">Stock Movements</div><div class="ck">최근 입출고</div></div></div>
     <div style="overflow-x:auto"><table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Product</span><span class="tk">상품</span></th><th><span class="te">Type</span><span class="tk">구분</span></th><th><span class="te">Qty</span><span class="tk">수량</span></th><th><span class="te">Note</span><span class="tk">비고</span></th><th style="width:1%;white-space:nowrap"></th></tr></thead><tbody id="inout-table"></tbody></table></div></div>
 </div>
@@ -751,6 +757,7 @@ function expandEventsForMonth(ym){
   }
   return result;
 }
+let invFilter='all';
 let products=LS.get('products'),inouts=LS.get('inouts'),
     orders=(LS.get('orders')||[]).map(o=>({...o,date:normDate(o.date)})),
     customers=LS.get('customers'),
@@ -1713,19 +1720,45 @@ function renderDash(){
 }
 
 /* ── RENDER: INVENTORY ─────────────────────────────────────────────────── */
+function setInvFilter(f,el){
+  invFilter=f;
+  document.querySelectorAll('.inv-filter').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderInventory();
+}
+function toggleDiscontinued(id){
+  const p=products.find(x=>x.id==id);if(!p)return;
+  p.discontinued=!p.discontinued;
+  LS.set('products',products);
+  renderInventory();renderDash();
+  updateRow('Products',id,{discontinued:p.discontinued?1:0});
+}
 function renderInventory(){
-  const ts=products.reduce((s,p)=>s+Number(p.stock),0);
-  const lc=products.filter(p=>Number(p.stock)<=Number(p.minStock)).length;
-  const tv=products.reduce((s,p)=>s+Number(p.stock)*Number(p.costPrice||0),0);
+  const activeP=products.filter(p=>!p.discontinued);
+  const discP=products.filter(p=>p.discontinued);
+  const ts=activeP.reduce((s,p)=>s+Number(p.stock),0);
+  const lc=activeP.filter(p=>Number(p.stock)<=Number(p.minStock)&&Number(p.stock)>0).length;
+  const tv=activeP.reduce((s,p)=>s+Number(p.stock)*Number(p.costPrice||0),0);
   document.getElementById('inv-stats').innerHTML=
-    `<div class="stat" onclick="detInv('sku')"><div class="sk">Total SKUs</div><div class="se">상품 종류</div><div class="sv">${products.length}</div></div>`+
+    `<div class="stat" onclick="detInv('sku')"><div class="sk">Total SKUs</div><div class="se">상품 종류</div><div class="sv">${activeP.length}</div></div>`+
     `<div class="stat" onclick="detInv('units')"><div class="sk">Total Units</div><div class="se">총 재고</div><div class="sv blue">${ts}</div></div>`+
     `<div class="stat" onclick="detInv('low')"><div class="sk">Low Stock</div><div class="se">부족 상품</div><div class="sv ${lc>0?'red':''}">${lc}</div></div>`+
     `<div class="stat" onclick="detInv('value')"><div class="sk">Inventory Value</div><div class="se">재고 자산</div><div class="sv green">${won(tv)}</div></div>`;
-  document.getElementById('product-table').innerHTML=products.length?products.map(p=>{
+  let filtered=activeP;
+  if(invFilter==='in')filtered=activeP.filter(p=>Number(p.stock)>0);
+  else if(invFilter==='out')filtered=activeP.filter(p=>Number(p.stock)===0);
+  document.getElementById('product-table').innerHTML=filtered.length?filtered.map(p=>{
     const col=p.stock==0?'var(--red)':Number(p.stock)<=Number(p.minStock)?'var(--amber)':'var(--green)';
-    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Delete</button></td></tr>`;
-  }).join(''):'<tr><td colspan="7" class="empty">No products yet</td></tr>';
+    return`<tr><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td class="mono" style="color:${col};font-weight:600">${p.stock}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditProduct(${p.id})">Edit</button><button class="btn btn-xs btn-d" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">단종</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`;
+  }).join(''):'<tr><td colspan="6" class="empty">해당 조건의 상품이 없습니다</td></tr>';
+  const dc=document.getElementById('discontinued-card');
+  if(discP.length){
+    dc.style.display='';
+    document.getElementById('disc-count').textContent=`${discP.length}개`;
+    document.getElementById('discontinued-table').innerHTML=discP.map(p=>`<tr class="disc-row"><td><strong>${p.name}</strong></td><td><span class="badge bg-gray"><span class="bk">${p.cat}</span></span></td><td class="mono" style="color:var(--text2)">${won(p.costPrice||0)}</td><td class="mono">${won(p.price)}</td><td style="white-space:nowrap"><button class="btn btn-xs btn-g" style="margin-right:3px" onclick="toggleDiscontinued(${p.id})">복원</button><button class="btn btn-xs btn-d" onclick="deleteProduct(${p.id})">Del</button></td></tr>`).join('');
+  }else{
+    dc.style.display='none';
+  }
   const tMap={in:'<span class="badge bg-green"><span class="bk">In</span><span class="be">입고</span></span>',out:'<span class="badge bg-blue"><span class="bk">Out</span><span class="be">출고</span></span>',adjust:'<span class="badge bg-gray"><span class="bk">Adjust</span><span class="be">조정</span></span>'};
   const recent=[...inouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
   document.getElementById('inout-table').innerHTML=recent.length?recent.map(io=>{
