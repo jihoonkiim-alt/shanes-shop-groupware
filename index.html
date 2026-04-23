@@ -794,6 +794,18 @@ async function syncFromSheets(silent=false){
     if(Array.isArray(res.expenses)){const sIds=new Set(res.expenses.map(r=>String(r.id).trim()));const pIds=pendIds('Expenses');const localOnly=noDel((expenses||[]).filter(r=>!sIds.has(String(r.id).trim())),'Expenses');const localEdits=noDel((expenses||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Expenses');const fromSheets=noDel(res.expenses,'Expenses').filter(r=>!pIds.has(String(r.id).trim())).map(e=>({...e,date:normDate(e.date)}));expenses=[...fromSheets,...localOnly,...localEdits];LS.set('expenses',expenses)}
     /* 고아 inout 정리: 명시적으로 삭제된 주문(Orders _del)의 Sale-out 인출만 제거 */
     {let _delO;try{_delO=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_delO={}}const deletedOrderIds=new Set((_delO['Orders']||[]).map(String));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&deletedOrderIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
+    /* ── 실패한 쓰기 재시도 ── */
+    {const localMap={Customers:customers,Products:products,Orders:orders,StockMovements:inouts,Events:events,Expenses:expenses};
+    // pushRow 재시도
+    let _pp;try{_pp=JSON.parse(localStorage.getItem('shs__pending_push')||'{}')}catch{_pp={}}
+    let ppChanged=false;
+    for(const sheet of Object.keys(_pp)){if(!(_pp[sheet]||[]).length)continue;const recs=localMap[sheet]||[];for(let i=_pp[sheet].length-1;i>=0;i--){const sid=_pp[sheet][i];const rec=recs.find(r=>String(r.id)===sid);if(!rec){_pp[sheet].splice(i,1);ppChanged=true;continue;}const r=await sheetsReq('append',{sheet,row:rec});if(r&&r.ok){_pp[sheet].splice(i,1);ppChanged=true;}}}
+    if(ppChanged)localStorage.setItem('shs__pending_push',JSON.stringify(_pp));
+    // updateRow 재시도
+    let _pu;try{_pu=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{_pu={}}
+    let puChanged=false;
+    for(const sheet of Object.keys(_pu)){if(!(_pu[sheet]||[]).length)continue;const recs=localMap[sheet]||[];for(let i=_pu[sheet].length-1;i>=0;i--){const sid=_pu[sheet][i];const rec=recs.find(r=>String(r.id)===sid);if(!rec){_pu[sheet].splice(i,1);puChanged=true;continue;}const r=await sheetsReq('update',{sheet,id:sid,updates:rec});if(r&&r.ok){_pu[sheet].splice(i,1);puChanged=true;}}}
+    if(puChanged)localStorage.setItem('shs__pending',JSON.stringify(_pu));}
     setSS('connected');
     if(!silent)toast('✓ Synced from Google Sheets');
     renderDash();
@@ -807,7 +819,13 @@ async function syncFromSheets(silent=false){
     }
   }else{setSS(SCRIPT_URL?'connected':'off');if(!silent)toast('⚠ Sync failed — check Sheets URL')}
 }
-async function pushRow(sheet,obj){if(SCRIPT_URL)await sheetsReq('append',{sheet,row:obj})}
+async function pushRow(sheet,obj){
+  if(!SCRIPT_URL)return;
+  const res=await sheetsReq('append',{sheet,row:obj});
+  if(!res||!res.ok){let p;try{p=JSON.parse(localStorage.getItem('shs__pending_push')||'{}')}catch{p={}}
+    if(!p[sheet])p[sheet]=[];if(!p[sheet].includes(String(obj.id)))p[sheet].push(String(obj.id));
+    localStorage.setItem('shs__pending_push',JSON.stringify(p));}
+}
 async function updateRow(sheet,id,obj){
   if(!SCRIPT_URL)return;
   let p;try{p=JSON.parse(localStorage.getItem('shs__pending')||'{}')}catch{p={}}
