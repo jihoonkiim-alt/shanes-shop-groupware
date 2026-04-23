@@ -1911,9 +1911,12 @@ function renderInvoicesPage(){
 function renderInvoices(){
   const month=document.getElementById('inv-month')?.value||nowYM();
   const mo=orders.filter(o=>o.date&&o.date.startsWith(month));
-  const totalRev=mo.reduce((s,o)=>s+Number(o.charge),0);
+  const totalRev=mo.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(month);
   const creditOut=customers.reduce((s,c)=>s+Number(c.outstanding||0),0);
-  const pending=mo.filter(o=>o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
+  const creditOrders=mo.filter(o=>o.payment==='credit');
+  const creditCids=new Set(creditOrders.map(o=>String(o.customerId)));
+  const creditExtras=[...creditCids].reduce((s,cid)=>s+Number(invExtras[`${cid}-${month}`]||0),0);
+  const pending=creditOrders.reduce((s,o)=>s+Number(o.charge),0)+creditExtras;
   document.getElementById('invtab-stats').innerHTML=
     `<div class="stat" onclick="detInvTab('rev')"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(totalRev)}</div></div>`+
     `<div class="stat" onclick="detInvTab('cust')"><div class="sk">Invoiced Customers</div><div class="se">청구 고객 수</div><div class="sv blue">${new Set(mo.map(o=>o.customerId)).size}명</div></div>`+
