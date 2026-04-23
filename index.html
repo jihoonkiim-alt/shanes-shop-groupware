@@ -1797,9 +1797,7 @@ function renderOrders(){
   document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
-    const actionBtn=o.type==='proxy'
-      ?`<button class="btn btn-xs" style="margin-right:3px" onclick="toggleProxy(${o.id})">${o.proxyStatus==='done'?'↩ Undo':'✓ Done'}</button>`
-      :'';
+    const actionBtn='';
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td><span class="mono">${totalCost>0?won(totalCost):'—'}</span></td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${actionBtn}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="10" class="empty">No orders for this period</td></tr>';
 }
