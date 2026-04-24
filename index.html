@@ -339,12 +339,15 @@ tr:hover td{background:var(--bg)}
   <div class="stats" id="dash-stats"></div>
   <div class="two-col">
     <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
-      <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table></div>
+      <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
+      <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
     <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
-      <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table></div>
+      <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table>
+      <div id="dash-stock-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
   </div>
   <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
-    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table>
+    <div id="dash-orders-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
 </div>
 
 <!-- INVENTORY -->
@@ -1708,19 +1711,36 @@ function renderDash(){
     `<div class="stat" onclick="detDashStock()"><div class="sk">Stock Sales</div><div class="se">재고판매</div><div class="sv blue">${sc}건</div></div>`+
     `<div class="stat" onclick="detDashOut()"><div class="sk">Outstanding</div><div class="se">전체 미수금</div><div class="sv ${out>0?'amber':''}">${won(out)}</div></div>`;
   const dashMonth=nowYM();
-  document.getElementById('dash-billing').innerHTML=customers.map(c=>{
+  const billingRows=customers.map(c=>{
     const amt=mo.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
-    if(!amt)return'';
+    if(!amt)return null;
     const isSettled=!!settlements[`${c.id}-${dashMonth}`];
-    return`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${isSettled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`;
-  }).join('')||'<tr><td colspan="3" class="empty">No billing this month</td></tr>';
+    return{html:`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${isSettled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`};
+  }).filter(Boolean);
+  const bPerPage=10;
+  if(dashBillingPage>=Math.ceil(billingRows.length/bPerPage))dashBillingPage=Math.max(0,Math.ceil(billingRows.length/bPerPage)-1);
+  const bSlice=billingRows.slice(dashBillingPage*bPerPage,(dashBillingPage+1)*bPerPage);
+  document.getElementById('dash-billing').innerHTML=bSlice.length?bSlice.map(r=>r.html).join(''):'<tr><td colspan="3" class="empty">No billing this month</td></tr>';
   const ls=products.filter(p=>!p.discontinued&&Number(p.stock)<=Number(p.minStock));
-  document.getElementById('dash-stock').innerHTML=ls.length?ls.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
-  const recent=[...orders].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
-  document.getElementById('dash-orders').innerHTML=recent.length?recent.map(o=>{
+  function renderPager(pagerId,page,total,perPage,onPrev,onNext){
+    const pages=Math.ceil(total/perPage);const p=document.getElementById(pagerId);
+    if(pages>1){p.style.display='flex';p.innerHTML=`<button class="btn btn-xs" ${page===0?'disabled':''} onclick="${onPrev}">‹ Prev</button><span style="color:var(--text2)">${page+1} / ${pages}</span><button class="btn btn-xs" ${page>=pages-1?'disabled':''} onclick="${onNext}">Next ›</button>`;}
+    else{p.style.display='none';}
+  }
+  renderPager('dash-billing-pager',dashBillingPage,billingRows.length,bPerPage,'dashBillingPage--;renderDash()','dashBillingPage++;renderDash()');
+  const perPage=10;
+  if(dashStockPage>=Math.ceil(ls.length/perPage))dashStockPage=Math.max(0,Math.ceil(ls.length/perPage)-1);
+  const lsSlice=ls.slice(dashStockPage*perPage,(dashStockPage+1)*perPage);
+  document.getElementById('dash-stock').innerHTML=lsSlice.length?lsSlice.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
+  renderPager('dash-stock-pager',dashStockPage,ls.length,perPage,'dashStockPage--;renderDash()','dashStockPage++;renderDash()');
+  const allRecent=[...orders].sort((a,b)=>b.date.localeCompare(a.date));
+  if(dashOrdersPage>=Math.ceil(allRecent.length/perPage))dashOrdersPage=Math.max(0,Math.ceil(allRecent.length/perPage)-1);
+  const recentSlice=allRecent.slice(dashOrdersPage*perPage,(dashOrdersPage+1)*perPage);
+  document.getElementById('dash-orders').innerHTML=recentSlice.length?recentSlice.map(o=>{
     const c=getC(o.customerId);
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">No orders yet</td></tr>';
+  renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,'dashOrdersPage--;renderDash()','dashOrdersPage++;renderDash()');
 }
 
 /* ── RENDER: INVENTORY ─────────────────────────────────────────────────── */
@@ -2076,7 +2096,7 @@ async function toggleSettled(cid,month,e){
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
-let custPage=0;
+let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function renderCustomers(q){
   const mo=thisMO();
