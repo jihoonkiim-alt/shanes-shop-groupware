@@ -354,8 +354,24 @@ tr:hover td{background:var(--bg)}
 <div class="sec active" id="tab-dash">
   <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><div class="btn-row"><button class="btn" onclick="syncFromSheets()">↻ Sync Sheets</button><button class="btn" onclick="dlAll()">⬇ Download All (.xlsx)</button></div></div>
   <div class="stats" id="dash-stats"></div>
+  <!-- Row 1: 3컬럼 — 이달 청구 / 최근 주문 / 재고 부족 -->
   <div class="three-col">
-    <!-- 왼쪽: 네이버 검색 + 뉴스 위젯 -->
+    <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
+      <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
+      <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
+      <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table>
+      <div id="dash-orders-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
+      <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table>
+      <div id="dash-stock-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
+  </div>
+  <!-- Row 2: 2컬럼 — 다가오는 일정 / 검색+뉴스 -->
+  <div class="two-col">
+    <div class="card">
+      <div class="ch"><div><div class="ce">Upcoming Events</div><div class="ck">다가오는 일정</div></div><button class="btn btn-xs" onclick="showTab('calendar')">캘린더 →</button></div>
+      <div style="padding:8px 15px 12px" id="dash-cal-events"><span style="font-size:11px;color:var(--text3)">Loading...</span></div>
+    </div>
     <div class="card">
       <div class="ch"><div><div class="ce">Search &amp; News</div><div class="ck">검색 · 뉴스</div></div></div>
       <div style="padding:12px 15px 4px">
@@ -379,23 +395,7 @@ tr:hover td{background:var(--bg)}
         </div>
       </div>
     </div>
-    <!-- 중간: 캘린더 주요 일정 -->
-    <div class="card">
-      <div class="ch"><div><div class="ce">Upcoming Events</div><div class="ck">다가오는 일정</div></div><button class="btn btn-xs" onclick="showTab('calendar')">캘린더 →</button></div>
-      <div style="padding:8px 15px 12px" id="dash-cal-events"><span style="font-size:11px;color:var(--text3)">Loading...</span></div>
-    </div>
-    <!-- 오른쪽: 재고 부족 알림 (컴팩트) -->
-    <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
-      <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table>
-      <div id="dash-stock-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
   </div>
-  <!-- 이달 청구 현황 (전체 너비) -->
-  <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
-    <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
-    <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
-  <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
-    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table>
-    <div id="dash-orders-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
 </div>
 
 <!-- INVENTORY -->
@@ -1956,12 +1956,15 @@ function renderDashCalendar(){
   }
   upcoming.sort((a,b)=>a.date.localeCompare(b.date));
   if(!upcoming.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:18px 0">No upcoming events</div>';return;}
-  el.innerHTML=upcoming.slice(0,10).map(ev=>{
+  const fmt=ds=>`${ds.slice(5,7)}/${ds.slice(8,10)}`;
+  el.innerHTML=upcoming.slice(0,12).map(ev=>{
     const label=ev.en||ev.ko||'(no title)';
     const isToday=ev.date===today;
-    const mm=ev.date.slice(5,7),dd=ev.date.slice(8,10);
-    const timeStr=ev.time?`<div class="dash-cal-time">${ev.time}</div>`:'';
-    return`<div class="dash-cal-item"><div class="dash-cal-date${isToday?' today':''}">${mm}/${dd}</div><div><div class="dash-cal-label">${label}</div>${timeStr}</div></div>`;
+    const rawEnd=ev.dateEnd&&ev.dateEnd>ev.date?ev.dateEnd:ev.date;
+    const dateLabel=rawEnd>ev.date?`${fmt(ev.date)}~${fmt(rawEnd)}`:fmt(ev.date);
+    const isMulti=rawEnd>ev.date;
+    const timeStr=ev.time&&!isMulti?`<span class="dash-cal-time"> · ${ev.time}</span>`:'';
+    return`<div class="dash-cal-item"><div class="dash-cal-date${isToday?' today':''}" style="width:${isMulti?'70px':'34px'}">${dateLabel}</div><div><div class="dash-cal-label">${label}${timeStr}</div></div></div>`;
   }).join('');
 }
 
@@ -2009,8 +2012,8 @@ function renderDash(){
   const recentSlice=allRecent.slice(dashOrdersPage*perPage,(dashOrdersPage+1)*perPage);
   document.getElementById('dash-orders').innerHTML=recentSlice.length?recentSlice.map(o=>{
     const c=getC(o.customerId);
-    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
-  }).join(''):'<tr><td colspan="6" class="empty">No orders yet</td></tr>';
+    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">No orders yet</td></tr>';
   renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,"goDashPage('orders',-1)","goDashPage('orders',1)");
   renderDashCalendar();
   loadNewsWidget();
