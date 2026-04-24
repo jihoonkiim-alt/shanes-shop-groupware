@@ -1443,7 +1443,7 @@ async function settleCredit(cid){
   months.forEach(m=>{const key=`${cid}-${m}`;if(!settlements[key])settlements[key]=true;});
   LS.set('settlements',settlements);
   c.settlements=_custSettlementsObj(cid);c.outstanding=0;LS.set('customers',customers);
-  updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
+  await updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
   const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료 ${won(amt)}`,en:`Settlement — ${c.name} ${won(amt)}`,type:'billing'};
   events.push(ev);LS.set('events',events);
   toast('✓ Settlement recorded');renderCustomers('');renderInvoices();
@@ -2175,7 +2175,7 @@ async function saveInvoiceExtra(cid,month,base){
   invExtras[key]=newExtra;
   LS.set('invExtras',invExtras);
   const c=getC(cid);if(c){c.invExtras=_custInvExtrasObj(cid);LS.set('customers',customers);}
-  updateRow('Customers',cid,{invExtras:JSON.stringify(_custInvExtrasObj(cid))});
+  await updateRow('Customers',cid,{invExtras:JSON.stringify(_custInvExtrasObj(cid))});
   if(diff!==0)await recalcCustomerOutstanding(cid);
   calcInvTotal(base);
   toast('✓ 추가금액 저장됨');
@@ -2191,7 +2191,7 @@ async function toggleSettled(cid,month,e){
   settlements[key]=!wasSettled;
   LS.set('settlements',settlements);
   c.settlements=_custSettlementsObj(cid);LS.set('customers',customers);
-  updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
+  await updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
   await recalcCustomerOutstanding(cid);
   toast(wasSettled?'↩ 정산 취소됨':'✓ 정산 완료');
   renderInvoices();renderOrders();renderDash();
