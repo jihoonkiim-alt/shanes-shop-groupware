@@ -450,7 +450,7 @@ tr:hover td{background:var(--bg)}
   <div class="ph">
     <div><div class="pte">Monthly Invoices</div><div class="ptk">월별 고객 인보이스</div></div>
     <div class="btn-row">
-      <select id="inv-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderInvoices()"></select>
+      <select id="inv-month" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="onInvMonthChange()"></select>
       <span style="font-size:11px;color:var(--text3)">Click customer name to expand details</span>
       <button class="btn" onclick="dlInvoices()">⬇ .xlsx</button>
     </div>
@@ -812,7 +812,9 @@ async function syncFromSheets(silent=false){
     if(Array.isArray(res.inouts)){const prevOid={};(inouts||[]).forEach(io=>{if(io.orderId!=null&&io.orderId!==undefined)prevOid[String(io.id)]=io.orderId;});const sheetsIoIds=new Set(res.inouts.map(io=>String(io.id).trim()));const pIds=pendIds('StockMovements');const localOnly=noDel((inouts||[]).filter(io=>!sheetsIoIds.has(String(io.id).trim())&&ppIds('StockMovements').has(String(io.id).trim())),'StockMovements');const localEdits=noDel((inouts||[]).filter(io=>pIds.has(String(io.id).trim())&&sheetsIoIds.has(String(io.id).trim())),'StockMovements');const fromSheets=noDel(res.inouts,'StockMovements').filter(o=>!pIds.has(String(o.id).trim())).map(o=>{const saved=prevOid[String(o.id)];return{...o,date:normDate(o.date),orderId:o.orderId??saved};});inouts=[...fromSheets,...localOnly,...localEdits];LS.set('inouts',inouts)}
     if(Array.isArray(res.events)){const sIds=new Set(res.events.map(r=>String(r.id).trim()));const pIds=pendIds('Events');const localOnly=noDel((events||[]).filter(r=>!sIds.has(String(r.id).trim())&&ppIds('Events').has(String(r.id).trim())),'Events');const localEdits=noDel((events||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Events');const fromSheets=noDel(res.events,'Events').filter(r=>!pIds.has(String(r.id).trim())).map(e=>({...e,date:normDate(e.date),dateEnd:normDate(e.dateEnd||e.date)}));events=[...fromSheets,...localOnly,...localEdits];LS.set('events',events)}
     if(Array.isArray(res.expenses)){const sIds=new Set(res.expenses.map(r=>String(r.id).trim()));const pIds=pendIds('Expenses');const localOnly=noDel((expenses||[]).filter(r=>!sIds.has(String(r.id).trim())&&ppIds('Expenses').has(String(r.id).trim())),'Expenses');const localEdits=noDel((expenses||[]).filter(r=>pIds.has(String(r.id).trim())&&sIds.has(String(r.id).trim())),'Expenses');const fromSheets=noDel(res.expenses,'Expenses').filter(r=>!pIds.has(String(r.id).trim())).map(e=>({...e,date:normDate(e.date)}));expenses=[...fromSheets,...localOnly,...localEdits];LS.set('expenses',expenses)}
-    /* settlements는 로컬 전용 → sync 후 outstanding을 로컬 settlements 기준으로 재계산 */
+    /* settlements·invExtras: 고객 레코드에서 재구성 (Sheets 기준으로 동기화) */
+    {const ns={};const ne={};customers.forEach(c=>{const cid=String(c.id);try{const cs=typeof c.settlements==='string'?JSON.parse(c.settlements||'{}'):(c.settlements||{});Object.entries(cs).forEach(([m,v])=>{ns[`${cid}-${m}`]=!!v;});}catch{}try{const ce=typeof c.invExtras==='string'?JSON.parse(c.invExtras||'{}'):(c.invExtras||{});Object.entries(ce).forEach(([m,v])=>{ne[`${cid}-${m}`]=Number(v||0);});}catch{}});settlements=ns;invExtras=ne;LS.set('settlements',settlements);LS.set('invExtras',invExtras);}
+    /* sync 후 outstanding을 settlements 기준으로 재계산 */
     {customers.forEach(c=>{const co=orders.filter(o=>String(o.customerId)===String(c.id)&&o.payment==='credit');if(!co.length){c.outstanding=0;return;}const ms=[...new Set([...co.map(o=>o.date?o.date.slice(0,7):null).filter(Boolean),...Object.keys(invExtras).filter(k=>k.startsWith(String(c.id)+'-')).map(k=>k.slice(String(c.id).length+1))])];let t=0;ms.forEach(m=>{const k=`${c.id}-${m}`;if(settlements[k])return;t+=co.filter(o=>o.date&&o.date.startsWith(m)).reduce((s,o)=>s+Number(o.charge),0);t+=invExtras[k]||0;});c.outstanding=Math.max(0,t);});LS.set('customers',customers);}
     /* 고아 inout 정리: 명시적으로 삭제된 주문(Orders _del)의 Sale-out 인출만 제거 */
     {let _delO;try{_delO=JSON.parse(localStorage.getItem('shs__del')||'{}')}catch{_delO={}}const deletedOrderIds=new Set((_delO['Orders']||[]).map(String));const orphans=inouts.filter(io=>io.type==='out'&&io.note==='Sale'&&io.orderId!=null&&io.orderId!==undefined&&String(io.orderId)!=='null'&&String(io.orderId)!=='undefined'&&deletedOrderIds.has(String(io.orderId)));if(orphans.length){orphans.forEach(io=>markDeleted('StockMovements',io.id));inouts=inouts.filter(io=>!orphans.includes(io));LS.set('inouts',inouts);orphans.forEach(io=>deleteRow('StockMovements',io.id));}}
@@ -2025,11 +2027,22 @@ function renderInvoices(){
   const custWithOrders=customers.map(c=>({c,cOrders:mo.filter(o=>o.customerId==c.id)})).filter(({cOrders})=>cOrders.length);
   const outstanding=custWithOrders.filter(({c,cOrders})=>!invSettled(cOrders,`${c.id}-${month}`));
   const settled=custWithOrders.filter(({c,cOrders})=>invSettled(cOrders,`${c.id}-${month}`));
+  const iPerPage=25;
+  function invPagerHtml(arr,page,sec){
+    const pages=Math.ceil(arr.length/iPerPage);if(pages<=1)return'';
+    const prev=`<button class="btn btn-xs" ${page===0?'disabled':''} onclick="goInvPage('${sec}',-1)">‹ Prev</button>`;
+    const next=`<button class="btn btn-xs" ${page>=pages-1?'disabled':''} onclick="goInvPage('${sec}',1)">Next ›</button>`;
+    return`<div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0;font-size:12px">${prev}<span style="color:var(--text2)">${page+1} / ${pages}</span>${next}</div>`;
+  }
+  if(invOutPage>=Math.ceil(outstanding.length/iPerPage))invOutPage=Math.max(0,Math.ceil(outstanding.length/iPerPage)-1);
+  if(invSetPage>=Math.ceil(settled.length/iPerPage))invSetPage=Math.max(0,Math.ceil(settled.length/iPerPage)-1);
+  const outSlice=outstanding.slice(invOutPage*iPerPage,(invOutPage+1)*iPerPage);
+  const setSlice=settled.slice(invSetPage*iPerPage,(invSetPage+1)*iPerPage);
   let html='';
   if(!custWithOrders.length){html='<div class="empty" style="padding:40px">No orders recorded for this month</div>';}
   else{
-    if(outstanding.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;padding:8px 2px 4px">OUTSTANDING · 미정산 (${outstanding.length})</div>`+outstanding.map(({c,cOrders})=>makeCard(c,cOrders)).join('');
-    if(settled.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;padding:${outstanding.length?16:8}px 2px 4px">SETTLED · 정산완료 (${settled.length})</div>`+settled.map(({c,cOrders})=>makeCard(c,cOrders)).join('');
+    if(outstanding.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;padding:8px 2px 4px">OUTSTANDING · 미정산 (${outstanding.length})</div>`+outSlice.map(({c,cOrders})=>makeCard(c,cOrders)).join('')+invPagerHtml(outstanding,invOutPage,'out');
+    if(settled.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;padding:${outstanding.length?16:8}px 2px 4px">SETTLED · 정산완료 (${settled.length})</div>`+setSlice.map(({c,cOrders})=>makeCard(c,cOrders)).join('')+invPagerHtml(settled,invSetPage,'set');
   }
   document.getElementById('invoice-list').innerHTML=html;
 }
@@ -2119,6 +2132,8 @@ function calcInvTotal(base){
   const el=document.getElementById('idoc-total');
   if(el)el.textContent=won(base+extra);
 }
+function _custSettlementsObj(cid){const o={};Object.entries(settlements).filter(([k])=>k.startsWith(`${cid}-`)).forEach(([k,v])=>{o[k.slice(String(cid).length+1)]=v;});return o;}
+function _custInvExtrasObj(cid){const o={};Object.entries(invExtras).filter(([k])=>k.startsWith(`${cid}-`)).forEach(([k,v])=>{o[k.slice(String(cid).length+1)]=v;});return o;}
 async function saveInvoiceExtra(cid,month,base){
   const newExtra=Number(document.getElementById('idoc-extra')?.value)||0;
   const key=`${cid}-${month}`;
@@ -2126,6 +2141,8 @@ async function saveInvoiceExtra(cid,month,base){
   const diff=newExtra-oldExtra;
   invExtras[key]=newExtra;
   LS.set('invExtras',invExtras);
+  const c=getC(cid);if(c){c.invExtras=_custInvExtrasObj(cid);LS.set('customers',customers);}
+  updateRow('Customers',cid,{invExtras:JSON.stringify(_custInvExtrasObj(cid))});
   if(diff!==0)await recalcCustomerOutstanding(cid);
   calcInvTotal(base);
   toast('✓ 추가금액 저장됨');
@@ -2137,20 +2154,24 @@ async function toggleSettled(cid,month,e){
   const mo=orders.filter(o=>o.customerId==cid&&o.date&&o.date.startsWith(month));
   const allPaid=mo.every(o=>o.payment!=='credit');
   const wasSettled=key in settlements?!!settlements[key]:allPaid;
-  if(!getC(cid))return;
+  const c=getC(cid);if(!c)return;
   settlements[key]=!wasSettled;
   LS.set('settlements',settlements);
+  c.settlements=_custSettlementsObj(cid);LS.set('customers',customers);
+  updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
   await recalcCustomerOutstanding(cid);
   toast(wasSettled?'↩ 정산 취소됨':'✓ 정산 완료');
   renderInvoices();renderOrders();renderDash();
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
-let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0;
+let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0,invOutPage=0,invSetPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function goDashPage(sec,d){if(sec==='billing')dashBillingPage+=d;else if(sec==='stock')dashStockPage+=d;else if(sec==='orders')dashOrdersPage+=d;renderDash();}
 function goSalesPage(d){salesOrdersPage+=d;renderOrders();}
 function onSalesFilter(){salesOrdersPage=0;renderOrders();}
+function goInvPage(sec,d){if(sec==='out')invOutPage+=d;else invSetPage+=d;renderInvoices();}
+function onInvMonthChange(){invOutPage=0;invSetPage=0;renderInvoices();}
 function renderCustomers(q){
   const mo=thisMO();
   const sort=(document.getElementById('cust-sort')||{}).value||'name';
