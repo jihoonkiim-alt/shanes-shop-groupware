@@ -1727,12 +1727,12 @@ function renderDash(){
     if(pages>1){p.style.display='flex';p.innerHTML=`<button class="btn btn-xs" ${page===0?'disabled':''} onclick="${onPrev}">‹ Prev</button><span style="color:var(--text2)">${page+1} / ${pages}</span><button class="btn btn-xs" ${page>=pages-1?'disabled':''} onclick="${onNext}">Next ›</button>`;}
     else{p.style.display='none';}
   }
-  renderPager('dash-billing-pager',dashBillingPage,billingRows.length,bPerPage,'dashBillingPage--;renderDash()','dashBillingPage++;renderDash()');
+  renderPager('dash-billing-pager',dashBillingPage,billingRows.length,bPerPage,"goDashPage('billing',-1)","goDashPage('billing',1)");
   const perPage=10;
   if(dashStockPage>=Math.ceil(ls.length/perPage))dashStockPage=Math.max(0,Math.ceil(ls.length/perPage)-1);
   const lsSlice=ls.slice(dashStockPage*perPage,(dashStockPage+1)*perPage);
   document.getElementById('dash-stock').innerHTML=lsSlice.length?lsSlice.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
-  renderPager('dash-stock-pager',dashStockPage,ls.length,perPage,'dashStockPage--;renderDash()','dashStockPage++;renderDash()');
+  renderPager('dash-stock-pager',dashStockPage,ls.length,perPage,"goDashPage('stock',-1)","goDashPage('stock',1)");
   const allRecent=[...orders].sort((a,b)=>b.date.localeCompare(a.date));
   if(dashOrdersPage>=Math.ceil(allRecent.length/perPage))dashOrdersPage=Math.max(0,Math.ceil(allRecent.length/perPage)-1);
   const recentSlice=allRecent.slice(dashOrdersPage*perPage,(dashOrdersPage+1)*perPage);
@@ -1740,7 +1740,7 @@ function renderDash(){
     const c=getC(o.customerId);
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">No orders yet</td></tr>';
-  renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,'dashOrdersPage--;renderDash()','dashOrdersPage++;renderDash()');
+  renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,"goDashPage('orders',-1)","goDashPage('orders',1)");
 }
 
 /* ── RENDER: INVENTORY ─────────────────────────────────────────────────── */
@@ -2098,6 +2098,7 @@ async function toggleSettled(cid,month,e){
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
 let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
+function goDashPage(sec,d){if(sec==='billing')dashBillingPage+=d;else if(sec==='stock')dashStockPage+=d;else if(sec==='orders')dashOrdersPage+=d;renderDash();}
 function renderCustomers(q){
   const mo=thisMO();
   const sort=(document.getElementById('cust-sort')||{}).value||'name';
