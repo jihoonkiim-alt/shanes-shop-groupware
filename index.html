@@ -1888,17 +1888,46 @@ function renderFinance(){
 
   /* ── 부가세 참고자료 ── */
   const vatPeriods=[{q:'1기',label:'상반기 (1~6월)',mm:['01','02','03','04','05','06']},{q:'2기',label:'하반기 (7~12월)',mm:['07','08','09','10','11','12']}];
-  let vatRows='';
+  const vmn=`font-family:'DM Mono',monospace;text-align:right`;
+  // 간이과세자: 소매업 부가가치율 15%, 납부세액 = 공급대가 × 1.5%
+  let simpRows='',genRows='';
   vatPeriods.forEach(p=>{
     const r=orders.filter(o=>o.date&&o.date.startsWith(year)&&p.mm.includes(o.date.slice(5,7))).reduce((s,o)=>s+Number(o.charge),0)+p.mm.reduce((s,mm)=>s+extraRevForPeriod(`${year}-${mm}`),0);
+    const simpTax=Math.round(r*0.015);
+    simpRows+=`<tr><td style="font-size:11px">${p.q} ${p.label}</td><td style="${vmn}">${won(r)}</td><td style="${vmn};color:var(--amber)">${r?won(simpTax):'—'}</td></tr>`;
     const sv=Math.round(r/1.1);const vt=r-sv;
-    vatRows+=`<tr><td style="font-size:11px">${p.q} ${p.label}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(r)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(sv)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(vt)}</td></tr>`;
+    genRows+=`<tr><td style="font-size:11px">${p.q} ${p.label}</td><td style="${vmn}">${won(r)}</td><td style="${vmn}">${won(sv)}</td><td style="${vmn};color:var(--amber)">${won(vt)}</td></tr>`;
   });
-  vatRows+=`<tr style="font-weight:700;border-top:2px solid var(--border2)"><td>연 합계</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(annRev)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(Math.round(annRev/1.1))}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(annRev-Math.round(annRev/1.1))}</td></tr>`;
+  const annSimpTax=Math.round(annRev*0.015);
+  simpRows+=`<tr style="font-weight:700;border-top:2px solid var(--border2)"><td>연 합계</td><td style="${vmn}">${won(annRev)}</td><td style="${vmn};color:var(--amber)">${won(annSimpTax)}</td></tr>`;
+  genRows+=`<tr style="font-weight:700;border-top:2px solid var(--border2)"><td>연 합계</td><td style="${vmn}">${won(annRev)}</td><td style="${vmn}">${won(Math.round(annRev/1.1))}</td><td style="${vmn};color:var(--amber)">${won(annRev-Math.round(annRev/1.1))}</td></tr>`;
+  // 납부면제·전환 여부 판단
+  const isExempt=annRev<48000000;
+  const willConvert=annRev>=104000000;
+  const approachingConvert=!willConvert&&annRev>=80000000;
+  const exemptChip=isExempt
+    ?`<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;border:1px solid #C8E6C9;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600">✓ 납부면제 (4,800만원 미만)</span>`
+    :`<span style="display:inline-flex;align-items:center;gap:4px;background:#FFF8E1;color:#F57F17;border:1px solid #FFE082;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600">⚠ 납부의무 (4,800만원 이상)</span>`;
+  const convertChip=willConvert
+    ?`<span style="display:inline-flex;align-items:center;gap:4px;background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600">⚠ 일반과세자 전환 대상 (1억 400만원 이상)</span>`
+    :approachingConvert
+    ?`<span style="display:inline-flex;align-items:center;gap:4px;background:#FFF3E0;color:#E65100;border:1px solid #FFE0B2;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600">주의 전환 기준 근접 중 (1억 400만원 미만)</span>`
+    :`<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F5E9;color:#2E7D32;border:1px solid #C8E6C9;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600">✓ 간이과세자 유지 (1억 400만원 미만)</span>`;
   document.getElementById('fin-vat').innerHTML=
     `<div class="fb-t">부가세 참고자료 <span style="font-size:10px;font-weight:400;color:var(--text3)">/ VAT Reference</span></div>`+
-    `<table style="width:100%"><thead><tr><th>과세기간</th><th style="text-align:right">공급대가(매출)</th><th style="text-align:right">공급가액(추정)</th><th style="text-align:right">매출세액(10%)</th></tr></thead><tbody>${vatRows}</tbody></table>`+
-    `<div class="tax-note">※ 공급가액은 공급대가의 100/110 기준 추정. 매입세액공제 후 실제 납부세액은 달라지며, 간이과세자는 업종별 부가가치율 적용. 신고 전 세무사 상담 권장.</div>`;
+    `<div style="font-size:11px;font-weight:700;color:var(--text2);padding:6px 0 4px">▸ 간이과세자 납부세액 추정 <span style="font-size:10px;font-weight:400;color:var(--text3)">(소매업 업종별 부가가치율 15% 적용)</span></div>`+
+    `<table style="width:100%"><thead><tr><th>과세기간</th><th style="text-align:right">공급대가(매출)</th><th style="text-align:right">납부세액 추정<br><span style="font-weight:400;font-size:10px">공급대가 × 1.5%</span></th></tr></thead><tbody>${simpRows}</tbody></table>`+
+    `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px">${exemptChip}${convertChip}</div>`+
+    `<div class="tax-note" style="margin-bottom:12px">
+      ※ <b>납부면제</b>: 연 공급대가 합계 <b>4,800만원 미만</b> 시 부가세 납부 의무 없음 (단, 신고 의무는 있음)<br>
+      ※ <b>세금계산서</b>: 연 매출 4,800만원 이상 간이과세자는 세금계산서 발급 의무 있음<br>
+      ※ <b>일반과세자 전환</b>: 직전 연도 공급대가 <b>1억 400만원 이상</b>이면 익년 7월 1일부터 일반과세자로 전환<br>
+      &nbsp;&nbsp;&nbsp;→ 전환 후 부가세: 매출세액(매출×10%) − 매입세액 = 납부세액 (아래 참고)<br>
+      ※ 부가가치율은 업종별로 다름. 소매업 기준 15% 적용, 신고 전 세무사 확인 권장.
+    </div>`+
+    `<div style="font-size:11px;font-weight:700;color:var(--text3);padding:4px 0 4px">▸ 일반과세자 기준 참고 <span style="font-weight:400">(전환 시 해당)</span></div>`+
+    `<table style="width:100%"><thead><tr><th>과세기간</th><th style="text-align:right">공급대가(매출)</th><th style="text-align:right">공급가액(추정)</th><th style="text-align:right">매출세액(10%)</th></tr></thead><tbody>${genRows}</tbody></table>`+
+    `<div class="tax-note">※ 공급가액 = 공급대가 × 100/110 추정. 실제 매입세액공제 후 납부세액은 달라짐.</div>`;
 
   /* ── 종합소득세 참고자료 ── */
   function korTax(inc){
@@ -1927,7 +1956,15 @@ function renderFinance(){
     `<div class="itax-row" style="padding-top:8px"><span>적용세율 구간</span><span style="font-size:11px;color:var(--text2)">${taxLabel}</span></div>`+
     `<div class="itax-row" style="font-weight:700;color:var(--accent)"><span>추정 소득세</span><span style="${mn}">${won(Math.max(0,taxAmt))}</span></div>`+
     `<div class="itax-row"><span>지방소득세 (소득세×10%)</span><span style="${mn};color:var(--text2)">${won(Math.max(0,Math.round(taxAmt*0.1)))}</span></div>`+
-    `<div class="tax-note">※ 인적공제·특별공제 등 미반영 추정값입니다. 실제 신고 시 달라질 수 있으니 세무사 상담 권장.</div>`;
+    `<div class="tax-note">※ 인적공제·특별공제 등 미반영 추정값입니다. 실제 신고 시 달라질 수 있으니 세무사 상담 권장.</div>`+
+    `<div class="tax-note" style="margin-top:6px;border-top:1px solid var(--border);padding-top:8px">
+      <b>간이과세자 종소세 참고사항</b><br>
+      ※ 간이과세자도 사업소득으로 종합소득세 신고 대상 (5월 신고)<br>
+      ※ 납부한 부가세(납부세액)는 필요경비로 처리 가능 — 위 순이익에서 추가 차감 가능<br>
+      ※ 납부면제로 부가세 미납 시 해당 연도 부가세는 경비 처리 불가<br>
+      ※ 장부 기장 시 기장세액공제 (산출세액의 20%, 최대 100만원) 적용 가능<br>
+      ※ 단순경비율 적용 가능 여부: 직전 연도 수입금액 2,400만원 미만 (소매업 기준)
+    </div>`;
 
   /* ── 연간 지출 명세 ── */
   const sortedExps=[...yExps].sort((a,b)=>b.date.localeCompare(a.date));
