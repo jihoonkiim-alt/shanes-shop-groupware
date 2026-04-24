@@ -503,6 +503,12 @@ tr:hover td{background:var(--bg)}
     <li>Deploy → New Deployment → Web App → Access: <strong>Anyone</strong> → Copy URL</li>
     <li>Paste URL above → Save & Connect</li>
   </ul>
+  <div style="margin-top:12px;padding:10px 12px;background:#f7f5f2;border-radius:8px;border:1px solid #e5e0d8">
+    <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:#1c1814">🔍 Sync 진단</div>
+    <div style="font-size:11px;color:#8a7e74;margin-bottom:8px">settlements/invExtras 컬럼이 시트에 있는지 확인합니다.</div>
+    <button class="btn btn-xs" onclick="diagSync()" id="diag-btn">진단 실행</button>
+    <div id="diag-result" style="margin-top:8px;font-size:11px;display:none"></div>
+  </div>
   <div class="mact">
     <button class="btn btn-d btn-xs" onclick="clearUrl()" style="margin-right:auto">Disconnect</button>
     <button class="btn" onclick="closeModal('modal-setup')">Cancel</button>
@@ -881,6 +887,32 @@ function setSS(s){
 }
 function saveUrl(){const url=document.getElementById('script-url-input').value.trim();SCRIPT_URL=url;localStorage.setItem('shs_script_url',url);closeModal('modal-setup');if(url){setSS('connected');toast('Sheets URL saved');syncFromSheets()}else setSS('off')}
 function clearUrl(){SCRIPT_URL='';localStorage.removeItem('shs_script_url');setSS('off');closeModal('modal-setup');toast('Disconnected')}
+async function diagSync(){
+  const btn=document.getElementById('diag-btn');
+  const res_el=document.getElementById('diag-result');
+  if(!SCRIPT_URL){res_el.style.display='block';res_el.innerHTML='<span style="color:#c0392b">⚠ URL 없음 — 먼저 저장하세요</span>';return;}
+  btn.disabled=true;btn.textContent='진단 중...';res_el.style.display='none';
+  const res=await sheetsReq('getAll');
+  btn.disabled=false;btn.textContent='진단 실행';
+  if(!res||!res.ok){res_el.style.display='block';res_el.innerHTML='<span style="color:#c0392b">⚠ GAS 연결 실패 — URL 확인</span>';return;}
+  const custs=res.customers||[];
+  const first=custs[0]||{};
+  const hasSett='settlements' in first;
+  const hasExt='invExtras' in first;
+  const settSample=custs.find(c=>c.settlements&&c.settlements!=='')?.settlements;
+  let html='';
+  if(hasSett&&hasExt){
+    html+=`<div style="color:#1e7e45">✓ settlements 컬럼 있음</div>`;
+    html+=`<div style="color:#1e7e45">✓ invExtras 컬럼 있음</div>`;
+    if(settSample)html+=`<div style="color:#8a7e74;margin-top:4px">샘플: ${String(settSample).slice(0,50)}</div>`;
+    else html+=`<div style="color:#b06a00;margin-top:4px">⚠ 컬럼은 있지만 데이터가 없음 — Settle 후 sync 다시 시도</div>`;
+  } else {
+    if(!hasSett)html+=`<div style="color:#c0392b">✗ settlements 컬럼 없음</div>`;
+    if(!hasExt)html+=`<div style="color:#c0392b">✗ invExtras 컬럼 없음</div>`;
+    html+=`<div style="margin-top:6px;color:#1c1814"><b>해결 방법:</b> GAS 스크립트에서 SCHEMAS Customers에 <code style="background:#f0efee;padding:1px 4px;border-radius:3px">"settlements","invExtras"</code> 추가 후 <code style="background:#f0efee;padding:1px 4px;border-radius:3px">migrateSheets()</code> 실행</div>`;
+  }
+  res_el.style.display='block';res_el.innerHTML=html;
+}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
 
 function nowYM(){const n=new Date();return`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`}
