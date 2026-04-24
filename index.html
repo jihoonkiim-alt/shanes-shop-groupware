@@ -684,19 +684,60 @@ tr:hover td{background:var(--bg)}
 
 <!-- MODAL: Expense -->
 <div class="modal-overlay" id="overlay-expense" onclick="if(event.target===this)closeModal('modal-expense')">
-<div class="modal" id="modal-expense">
+<div class="modal" id="modal-expense" style="max-width:560px">
   <div class="mth"><div class="me">Add Expense</div><div class="mk">지출 등록 — 사업 비용</div></div>
   <div class="field"><label><span class="lk">Date / 날짜</span></label><input type="date" id="exp-date"></div>
   <div class="field"><label><span class="lk">Expense Type / 비용 구분</span></label>
-    <select id="exp-type">
-      <option value="shipping">Shipping Fee / 배송비</option>
-      <option value="packaging">Packaging / 포장비</option>
-      <option value="fee">Platform/Service Fee / 수수료</option>
-      <option value="other">Other / 기타</option>
+    <select id="exp-type" onchange="onExpTypeChange()">
+      <optgroup label="── 판매·운영 비용">
+        <option value="shipping">배송비 (택배·우편)</option>
+        <option value="packaging">포장재비 (박스·테이프·완충재)</option>
+        <option value="fee_platform">플랫폼 수수료 (네이버·쿠팡 등)</option>
+        <option value="fee_pg">결제 수수료 (PG·카드)</option>
+        <option value="ad">광고·홍보비 (SNS·키워드 광고)</option>
+      </optgroup>
+      <optgroup label="── 인건비">
+        <option value="labor_owner">대표자 인건비 (본인 급여)</option>
+        <option value="labor_staff">직원 급여</option>
+        <option value="labor_insurance">4대보험 사업주부담금</option>
+      </optgroup>
+      <optgroup label="── 임차·시설">
+        <option value="rent">임차료 (사무실·창고·보증금이자)</option>
+        <option value="utility">수도광열비 (전기·수도·가스)</option>
+        <option value="comms">통신비 (인터넷·휴대폰 업무용)</option>
+      </optgroup>
+      <optgroup label="── 차량·출장">
+        <option value="vehicle">차량유지비 (주유·보험·수리)</option>
+        <option value="travel">출장비 (교통·숙박)</option>
+        <option value="meal">식대·접대비 (업무 관련)</option>
+      </optgroup>
+      <optgroup label="── 세금·공과">
+        <option value="tax_vat">부가세 납부금</option>
+        <option value="tax_income">종합소득세 납부금</option>
+        <option value="tax_local">지방세·공과금</option>
+      </optgroup>
+      <optgroup label="── 관리·기타">
+        <option value="supplies">소모품비 (사무용품·잡자재)</option>
+        <option value="fee_pro">지급수수료 (세무사·법무사)</option>
+        <option value="insurance">보험료 (사업자·화재보험)</option>
+        <option value="depreciation">감가상각비 (장비·집기)</option>
+        <option value="other">기타 잡비</option>
+      </optgroup>
     </select>
   </div>
-  <div class="field"><label><span class="lk">Amount / 금액 (₩)</span></label><input type="number" id="exp-amount" placeholder="0"></div>
-  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="exp-note" placeholder="e.g. Coupang delivery charge, box supplies..."></div>
+  <div id="exp-type-note" style="margin:-6px 0 10px;padding:8px 12px;background:#fff8ed;border-radius:7px;border-left:3px solid var(--warn);font-size:11px;color:#7a5000;display:none"></div>
+  <div class="field"><label><span class="lk">Amount / 금액 (₩)</span></label><input type="number" id="exp-amount" placeholder="0" min="0"></div>
+  <div class="field"><label><span class="lk">Note / 메모</span></label><input type="text" id="exp-note" placeholder="예: 쿠팡 로켓배송 위탁비 3월분, 스마트스토어 수수료"></div>
+  <!-- 증빙·절세 참고사항 -->
+  <div style="background:#f7f5f2;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:11px;color:#5a5048;line-height:1.7">
+    <div style="font-weight:700;margin-bottom:6px;color:#1c1814">📋 지출 기록 시 참고사항</div>
+    <div><b>증빙 보관</b> — 세금계산서·영수증·카드 전표 5년 보관 (종소세 신고 대비)</div>
+    <div><b>신용카드 사용 권장</b> — 사업용 카드 사용 시 국세청 자동 집계, 별도 증빙 없어도 비용 인정</div>
+    <div><b>접대비 한도</b> — 개인사업자 연 1,200만원 한도. 초과분은 비용 불인정</div>
+    <div><b>차량 비용</b> — 업무 전용 등록 차량 100% 처리 가능. 혼용 차량은 업무 사용 비율만 처리</div>
+    <div><b>대표자 본인 급여</b> — 개인사업자는 세법상 필요경비 불인정 (법인과 다름). 현금흐름 파악 목적으로만 기록</div>
+    <div><b>세금 납부금</b> — 부가세·종소세 납부 자체는 비용 처리 불가. 현금 지출 기록 목적으로만 등록</div>
+  </div>
   <div class="mact"><button class="btn" onclick="closeModal('modal-expense')">Cancel</button><button class="btn btn-p" onclick="saveExpense()">Save Expense</button></div>
 </div>
 </div>
@@ -953,10 +994,15 @@ function platChip(pl){
   return`<span class="plat plat-${pl}">${m[pl]||pl}</span>`;
 }
 function expTypeBadge(t){
-  const m={shipping:'Shipping/배송비',packaging:'Packaging/포장비',fee:'Platform Fee/수수료',other:'Other/기타'};
-  const cl={shipping:'bg-blue',packaging:'bg-green',fee:'bg-amber',other:'bg-gray'};
-  const pts=(m[t]||t).split('/');
-  return`<span class="badge ${cl[t]||'bg-gray'}"><span class="bk">${pts[0]}</span><span class="be">${pts[1]||''}</span></span>`;
+  const cl={
+    shipping:'bg-blue',packaging:'bg-blue',fee_platform:'bg-blue',fee_pg:'bg-blue',ad:'bg-blue',fee:'bg-blue',
+    labor_owner:'bg-purple',labor_staff:'bg-purple',labor_insurance:'bg-purple',
+    rent:'bg-green',utility:'bg-green',comms:'bg-green',
+    vehicle:'bg-amber',travel:'bg-amber',meal:'bg-amber',
+    tax_vat:'bg-red',tax_income:'bg-red',tax_local:'bg-red',
+    supplies:'bg-gray',fee_pro:'bg-gray',insurance:'bg-gray',depreciation:'bg-gray',other:'bg-gray'
+  };
+  return`<span class="badge ${cl[t]||'bg-gray'}" style="white-space:nowrap">${expLabel(t)}</span>`;
 }
 
 /* ── SEED DATA ─────────────────────────────────────────────────────────── */
@@ -1422,6 +1468,33 @@ async function saveEvent(){
 }
 
 /* ── EXPENSE ───────────────────────────────────────────────────────────── */
+const EXP_TYPE_NOTES={
+  labor_owner:'개인사업자 대표자 급여는 세법상 필요경비 불인정. 현금흐름 파악 목적으로만 기록하세요.',
+  labor_insurance:'직원이 있는 경우 사업주 부담분(국민연금·건보·고용·산재)만 비용 처리 가능.',
+  meal:'접대비는 연 1,200만원 한도(개인사업자). 초과분은 비용 불인정. 영수증 반드시 보관.',
+  tax_vat:'부가세 납부 자체는 비용 처리 불가. 납부 현금 지출 확인 목적으로만 기록.',
+  tax_income:'종합소득세 납부 자체는 비용 처리 불가. 현금 지출 확인 목적으로만 기록.',
+  vehicle:'업무 전용 등록 차량은 100% 처리 가능. 혼용 차량은 업무 비율만 처리 가능.',
+  depreciation:'장비·집기 구입가 전액이 아닌 내용연수에 따른 감가상각액만 연도별 비용 처리.'
+};
+function onExpTypeChange(){
+  const t=document.getElementById('exp-type').value;
+  const el=document.getElementById('exp-type-note');
+  const note=EXP_TYPE_NOTES[t];
+  if(note){el.textContent='⚠ '+note;el.style.display='block';}
+  else{el.style.display='none';}
+}
+const EXP_TYPE_LABEL={
+  shipping:'배송비',packaging:'포장재비',fee_platform:'플랫폼 수수료',fee_pg:'결제 수수료',
+  ad:'광고·홍보비',labor_owner:'대표자 인건비',labor_staff:'직원 급여',
+  labor_insurance:'4대보험 사업주부담',rent:'임차료',utility:'수도광열비',comms:'통신비',
+  vehicle:'차량유지비',travel:'출장비',meal:'식대·접대비',
+  tax_vat:'부가세 납부',tax_income:'종합소득세',tax_local:'지방세·공과금',
+  supplies:'소모품비',fee_pro:'지급수수료(세무사 등)',insurance:'보험료',
+  depreciation:'감가상각비',other:'기타',
+  fee:'수수료'
+};
+function expLabel(t){return EXP_TYPE_LABEL[t]||t;}
 async function saveExpense(){
   const date=document.getElementById('exp-date').value;
   const amount=Number(document.getElementById('exp-amount').value);
@@ -1975,9 +2048,8 @@ function renderFinance(){
     return{label:'40% (누진공제 2,594만원)',tax:Math.round(inc*0.40-25940000)};
   }
   const {label:taxLabel,tax:taxAmt}=korTax(Math.max(0,annProfit));
-  const catMap={shipping:'배송비',packaging:'포장비',fee:'플랫폼 수수료',other:'기타 경비'};
   const catTotals={};yExps.forEach(e=>{catTotals[e.type]=(catTotals[e.type]||0)+Number(e.amount);});
-  const catRows=Object.entries(catMap).map(([k,v])=>{const a=catTotals[k]||0;return a?`<div class="itax-row indent"><span>${v}</span><span style="font-family:'DM Mono',monospace">− ${won(a)}</span></div>`:''}).join('');
+  const catRows=Object.entries(catTotals).filter(([,a])=>a>0).map(([k,a])=>`<div class="itax-row indent"><span>${expLabel(k)}</span><span style="font-family:'DM Mono',monospace">− ${won(a)}</span></div>`).join('');
   const mn=`font-family:'DM Mono',monospace`;
   document.getElementById('fin-itax').innerHTML=
     `<div class="fb-t">종합소득세 참고자료 <span style="font-size:10px;font-weight:400;color:var(--text3)">/ Income Tax Reference</span></div>`+
@@ -2629,7 +2701,7 @@ function dlFinance(){
     ]},
     {name:'월별손익 Monthly PL',data:monthly},
     {name:'부가세 VAT',data:vatData},
-    {name:'지출명세 Expenses',data:yExps.map(e=>({'날짜':e.date,'구분':e.type,'금액(₩)':e.amount,'메모':e.note||''}))},
+    {name:'지출명세 Expenses',data:yExps.map(e=>({'날짜':e.date,'구분':expLabel(e.type),'금액(₩)':e.amount,'메모':e.note||''}))},
     {name:'매출명세 Orders',data:yOrds.map(o=>{const c=getC(o.customerId);return{'날짜':o.date,'고객':c?c.name:'?','내용':o.desc,'유형':o.type,'원가(₩)':Number(o.cost||0),'배송(₩)':Number(o.shippingCost||0),'청구(₩)':o.charge,'결제':o.payment};})},
   ],`shanes-tax-ledger-${year}.xlsx`);
   toast('✓ Downloaded: Tax Ledger '+year);
