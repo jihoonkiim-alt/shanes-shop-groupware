@@ -62,7 +62,7 @@ body{background:var(--bg)}
 .btn-xs{padding:4px 9px;font-size:10px}
 
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;cursor:pointer;transition:.15s;user-select:none}
 .stat:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.07)}
 .det-tbl{width:100%;border-collapse:collapse;font-size:12px}
@@ -1978,7 +1978,11 @@ function renderDash(){
   const moExp=expenses.filter(e=>e.date&&e.date.startsWith(nowYM())).reduce((s,e)=>s+Number(e.amount),0);
   const moCost=mo.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
   const profit=rev-moCost-moExp;
+  const thisYear=String(new Date().getFullYear());
+  const yOrds=orders.filter(o=>o.date&&o.date.startsWith(thisYear));
+  const annRev=yOrds.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(thisYear);
   document.getElementById('dash-stats').innerHTML=
+    `<div class="stat" onclick="detDashAnnRev()"><div class="sk">Annual Revenue</div><div class="se">${thisYear}년 연매출</div><div class="sv green">${won(annRev)}</div></div>`+
     `<div class="stat" onclick="detDashRev()"><div class="sk">Monthly Revenue</div><div class="se">이달 매출</div><div class="sv green">${won(rev)}</div></div>`+
     `<div class="stat" onclick="detDashProfit()"><div class="sk">Net Profit</div><div class="se">순이익 (비용 차감)</div><div class="sv ${profit>=0?'green':'red'}">${won(profit)}</div></div>`+
     `<div class="stat" onclick="detDashProxy()"><div class="sk">Proxy Orders</div><div class="se">구매대행</div><div class="sv purple">${pc}건</div></div>`+
@@ -2678,6 +2682,21 @@ function showStatDetail(en,ko,html){
   document.getElementById('sdd-body').innerHTML=html;
   document.getElementById('overlay-stat-detail').classList.add('open');
   document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
+}
+function detDashAnnRev(){
+  const year=String(new Date().getFullYear());
+  const MK=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const nowM=new Date().getMonth();
+  let total=0;
+  const rows=MK.map((mk,i)=>{
+    const ym=`${year}-${String(i+1).padStart(2,'0')}`;
+    const rev=orders.filter(o=>o.date&&o.date.startsWith(ym)).reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(ym);
+    total+=rev;
+    const isFuture=i>nowM;
+    return`<tr style="${isFuture?'opacity:.4':''}"><td>${mk}</td><td class="mono r">${won(rev)}</td></tr>`;
+  }).join('');
+  const totalRow=`<tr style="font-weight:600;border-top:2px solid var(--border)"><td>${year}년 합계</td><td class="mono r green">${won(total)}</td></tr>`;
+  showStatDetail('Annual Revenue',`${year}년 월별 매출`,`<table class="det-tbl"><thead><tr><th>월</th><th class="r">매출</th></tr></thead><tbody>${rows}${totalRow}</tbody></table>`);
 }
 function detDashRev(){
   const mo=thisMO();
