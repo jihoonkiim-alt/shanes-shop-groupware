@@ -993,7 +993,11 @@ function thisMO(){return orders.filter(o=>o.date&&o.date.startsWith(nowYM()))}
 function extraRevForPeriod(prefix){
   return Object.entries(invExtras).reduce((s,[k,v])=>{const m=k.slice(-7);return m.startsWith(prefix)?s+Number(v||0):s;},0);
 }
-function newId(arr){return arr.length?Math.max(...arr.map(x=>Number(x.id)||0))+1:1}
+function newId(){return Date.now()*1000+Math.floor(Math.random()*1000)}
+async function _syncBeforeEdit(){
+  if(!SCRIPT_URL)return;
+  await syncFromSheets(true);
+}
 function won(n){return Number(n||0).toLocaleString('ko-KR')+'원'}
 function populateSel(id,opts){document.getElementById(id).innerHTML='<option value="">Select...</option>'+opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('')}
 
@@ -1321,8 +1325,9 @@ async function saveOrder(){
 }
 
 /* ── PRODUCT ───────────────────────────────────────────────────────────── */
-function openEditProduct(id){
-  const p=getP(id);if(!p)return;
+async function openEditProduct(id){
+  await _syncBeforeEdit();
+  const p=getP(id);if(!p){toast('⚠ 항목이 삭제됐거나 찾을 수 없습니다');return;}
   document.getElementById('modal-product').dataset.editId=id;
   document.getElementById('p-modal-title-e').textContent='Edit Product';
   document.getElementById('p-modal-title-k').textContent='상품 수정';
@@ -1410,8 +1415,9 @@ async function deleteInout(id){
   if(stockPid!=null)await updateRow('Products',stockPid,{stock:newStock});
   await deleteRow('StockMovements',id);
 }
-function openEditInout(id){
-  const io=inouts.find(x=>x.id==id);if(!io)return;
+async function openEditInout(id){
+  await _syncBeforeEdit();
+  const io=inouts.find(x=>x.id==id);if(!io){toast('⚠ 항목이 삭제됐거나 찾을 수 없습니다');return;}
   const p=getP(io.productId);
   document.getElementById('eio-date').value=io.date||'';
   document.getElementById('eio-product-name').value=p?p.name:'(deleted)';
@@ -1711,8 +1717,9 @@ function filterEOCustomerAC(q){
   ac.innerHTML=matches.map(c=>`<div onclick="document.getElementById('eo-customer-text').value='${c.name.replace(/'/g,"\\'")}';document.getElementById('eo-customer').value=${c.id};document.getElementById('eo-customer-ac').style.display='none'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='#fff'"><div style="font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.contact||''}</div></div>`).join('');
   ac.style.display='block';
 }
-function openEditOrder(id){
-  const o=orders.find(x=>x.id==id);if(!o)return;
+async function openEditOrder(id){
+  await _syncBeforeEdit();
+  const o=orders.find(x=>x.id==id);if(!o){toast('⚠ 항목이 삭제됐거나 찾을 수 없습니다');return;}
   const c=getC(o.customerId);
   document.getElementById('eo-date').value=o.date||'';
   document.getElementById('eo-customer-text').value=c?c.name:'';
@@ -2371,8 +2378,9 @@ function openCustomerDetail(id){
   document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
 }
 
-function openEditCustomer(id){
-  const c=customers.find(x=>x.id==id);if(!c)return;
+async function openEditCustomer(id){
+  await _syncBeforeEdit();
+  const c=customers.find(x=>x.id==id);if(!c){toast('⚠ 항목이 삭제됐거나 찾을 수 없습니다');return;}
   closeModal('modal-customer-detail');
   document.getElementById('c-name').value=c.name||'';
   document.getElementById('c-contact').value=c.contact||'';
