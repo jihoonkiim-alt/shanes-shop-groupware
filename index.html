@@ -245,6 +245,7 @@ tr:hover td{background:var(--bg)}
 /* INVOICE */
 .inv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;transition:.15s}
 .inv-card:hover{border-color:var(--border2)}
+.inv-settled{opacity:.55}
 .inv-head{padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer}
 .inv-head:hover .inv-name{color:var(--accent);text-decoration:underline}
 .inv-name{font-size:14px;font-weight:600;flex:1}
@@ -1922,30 +1923,41 @@ function renderInvoices(){
     `<div class="stat" onclick="detInvTab('cust')"><div class="sk">Invoiced Customers</div><div class="se">청구 고객 수</div><div class="sv blue">${new Set(mo.map(o=>o.customerId)).size}명</div></div>`+
     `<div class="stat" onclick="detInvTab('credit')"><div class="sk">On Credit</div><div class="se">외상 청구액</div><div class="sv amber">${won(pending)}</div></div>`+
     `<div class="stat" onclick="detInvTab('out')"><div class="sk">Total Outstanding</div><div class="se">전체 미수금</div><div class="sv ${creditOut>0?'red':''}">${won(creditOut)}</div></div>`;
-  const cards=customers.map(c=>{
-    const cOrders=mo.filter(o=>o.customerId==c.id);
-    const total=cOrders.reduce((s,o)=>s+Number(o.charge),0);
-    if(!cOrders.length)return'';
+  function invSettled(cOrders,key){
+    const allPaid=cOrders.every(o=>o.payment!=='credit');
+    return key in settlements?!!settlements[key]:allPaid;
+  }
+  function makeCard(c,cOrders){
     const key=`${c.id}-${month}`;
-    const isSettled=!!settlements[key];
+    const settled=invSettled(cOrders,key);
+    const total=cOrders.reduce((s,o)=>s+Number(o.charge),0);
     const extraAmt=invExtras[key]||0;
     const grandAmt=total+cOrders.reduce((s,o)=>s+Number(o.shippingCost||0),0)+extraAmt;
-    return`<div class="inv-card" onclick="openInvoiceModal(${c.id})" style="cursor:pointer">
+    return`<div class="inv-card${settled?' inv-settled':''}" onclick="openInvoiceModal(${c.id})" style="cursor:pointer">
       <div class="inv-head">
         <div style="flex:1">
           <div class="inv-name">${c.name}</div>
           <div class="inv-meta">${cOrders.length} order${cOrders.length>1?'s':''} · ${c.contact||''}</div>
         </div>
         <div style="text-align:right;margin-right:10px">
-          <div class="inv-amt ${isSettled?'green':''}">${won(grandAmt)}</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:2px">${isSettled?'정산완료 ✓':(Number(c.outstanding)>0?`미수금 ${won(c.outstanding)}`:'')}</div>
+          <div class="inv-amt ${settled?'green':''}">${won(grandAmt)}</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:2px">${settled?'Settled ✓':(Number(c.outstanding)>0?`Outstanding ${won(c.outstanding)}`:'')}</div>
         </div>
-        <button class="btn btn-xs ${isSettled?'':'btn-p'}" style="white-space:nowrap;margin-right:8px" onclick="toggleSettled(${c.id},'${month}',event)">${isSettled?'↩ 정산취소':'✓ 정산완료'}</button>
+        <button class="btn btn-xs ${settled?'':'btn-p'}" style="white-space:nowrap;margin-right:8px" onclick="toggleSettled(${c.id},'${month}',event)">${settled?'↩ Unsettle':'✓ Settle'}</button>
         <span style="font-size:18px;color:var(--text3)">›</span>
       </div>
     </div>`;
-  }).join('');
-  document.getElementById('invoice-list').innerHTML=cards||'<div class="empty" style="padding:40px">No orders recorded for this month</div>';
+  }
+  const custWithOrders=customers.map(c=>({c,cOrders:mo.filter(o=>o.customerId==c.id)})).filter(({cOrders})=>cOrders.length);
+  const outstanding=custWithOrders.filter(({c,cOrders})=>!invSettled(cOrders,`${c.id}-${month}`));
+  const settled=custWithOrders.filter(({c,cOrders})=>invSettled(cOrders,`${c.id}-${month}`));
+  let html='';
+  if(!custWithOrders.length){html='<div class="empty" style="padding:40px">No orders recorded for this month</div>';}
+  else{
+    if(outstanding.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;padding:8px 2px 4px">OUTSTANDING · 미정산 (${outstanding.length})</div>`+outstanding.map(({c,cOrders})=>makeCard(c,cOrders)).join('');
+    if(settled.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;padding:${outstanding.length?16:8}px 2px 4px">SETTLED · 정산완료 (${settled.length})</div>`+settled.map(({c,cOrders})=>makeCard(c,cOrders)).join('');
+  }
+  document.getElementById('invoice-list').innerHTML=html;
 }
 
 function openInvoiceModal(cid){
@@ -2048,12 +2060,11 @@ async function saveInvoiceExtra(cid,month,base){
 async function toggleSettled(cid,month,e){
   e.stopPropagation();
   const key=`${cid}-${month}`;
-  const wasSettled=!!settlements[key];
   const mo=orders.filter(o=>o.customerId==cid&&o.date&&o.date.startsWith(month));
-  const creditTotal=mo.filter(o=>o.payment==='credit').reduce((s,o)=>s+Number(o.charge)+(Number(o.shippingCost)||0),0)+(invExtras[key]||0);
+  const allPaid=mo.every(o=>o.payment!=='credit');
+  const wasSettled=key in settlements?!!settlements[key]:allPaid;
   if(!getC(cid))return;
-  if(wasSettled)settlements[key]=false;
-  else settlements[key]=true;
+  settlements[key]=!wasSettled;
   LS.set('settlements',settlements);
   await recalcCustomerOutstanding(cid);
   toast(wasSettled?'↩ 정산 취소됨':'✓ 정산 완료');
