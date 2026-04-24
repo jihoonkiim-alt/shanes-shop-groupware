@@ -232,6 +232,10 @@ tr:hover td{background:var(--bg)}
 .dash-cal-date.today{color:var(--accent);font-weight:700}
 .dash-cal-label{font-size:11px;line-height:1.4;color:var(--text)}
 .dash-cal-time{font-size:10px;color:var(--text3)}
+.dash-cal-personal .dash-cal-label{color:var(--accent);font-weight:700}
+.dash-cal-personal .dash-cal-date{color:var(--accent)}
+.dash-cal-note .dash-cal-label{color:var(--text3);font-style:italic}
+.dash-cal-note .dash-cal-date{color:var(--text3)}
 .naver-search-inp{flex:1;padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none}
 .naver-search-inp:focus{border-color:var(--accent)}
 .news-item{display:block;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);cursor:pointer}
@@ -1964,7 +1968,8 @@ function renderDashCalendar(){
     const dateLabel=rawEnd>ev.date?`${fmt(ev.date)}~${fmt(rawEnd)}`:fmt(ev.date);
     const isMulti=rawEnd>ev.date;
     const timeStr=ev.time&&!isMulti?`<span class="dash-cal-time"> · ${ev.time}</span>`:'';
-    return`<div class="dash-cal-item"><div class="dash-cal-date${isToday?' today':''}" style="width:${isMulti?'70px':'34px'}">${dateLabel}</div><div><div class="dash-cal-label">${label}${timeStr}</div></div></div>`;
+    const typeClass=ev.type==='personal'?'dash-cal-personal':ev.type==='note'?'dash-cal-note':'';
+    return`<div class="dash-cal-item${typeClass?' '+typeClass:''}"><div class="dash-cal-date${isToday?' today':''}" style="width:${isMulti?'70px':'34px'}">${dateLabel}</div><div><div class="dash-cal-label">${label}${timeStr}</div></div></div>`;
   }).join('');
 }
 
