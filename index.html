@@ -225,6 +225,13 @@ tr:hover td{background:var(--bg)}
 
 /* MISC */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.naver-search-inp{flex:1;padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none}
+.naver-search-inp:focus{border-color:var(--accent)}
+.news-item{display:block;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);cursor:pointer}
+.news-item:last-child{border-bottom:none}
+.news-item-title{font-size:11px;line-height:1.45;color:var(--text)}
+.news-item:hover .news-item-title{color:var(--accent);text-decoration:underline}
+.news-item-date{font-size:10px;color:var(--text3);margin-top:2px}
 .empty{text-align:center;padding:28px;color:var(--text3);font-size:11px}
 .mono{font-family:'DM Mono',monospace;font-size:11px}
 .search-wrap{display:flex;gap:8px;margin-bottom:14px}
@@ -341,13 +348,39 @@ tr:hover td{background:var(--bg)}
   <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><div class="btn-row"><button class="btn" onclick="syncFromSheets()">↻ Sync Sheets</button><button class="btn" onclick="dlAll()">⬇ Download All (.xlsx)</button></div></div>
   <div class="stats" id="dash-stats"></div>
   <div class="two-col">
-    <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
-      <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
-      <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
+    <!-- 왼쪽: 네이버 검색 + 뉴스 위젯 -->
+    <div class="card">
+      <div class="ch"><div><div class="ce">Search &amp; News</div><div class="ck">검색 · 뉴스</div></div></div>
+      <div style="padding:12px 15px 4px">
+        <form onsubmit="naverSearch(event)" style="display:flex;gap:8px;margin-bottom:16px">
+          <input type="text" id="naver-q" class="naver-search-inp" placeholder="네이버 검색...">
+          <button type="submit" class="btn" style="white-space:nowrap;flex-shrink:0">검색</button>
+        </form>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">🇰🇷 네이버 주요뉴스</span>
+            <a href="https://news.naver.com" target="_blank" style="font-size:10px;color:var(--text3);text-decoration:none">전체보기 →</a>
+          </div>
+          <div id="naver-news-list"><span style="font-size:11px;color:var(--text3)">로딩 중...</span></div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">🌐 CNN World News</span>
+            <a href="https://www.cnn.com" target="_blank" style="font-size:10px;color:var(--text3);text-decoration:none">전체보기 →</a>
+          </div>
+          <div id="cnn-news-list"><span style="font-size:11px;color:var(--text3)">로딩 중...</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- 오른쪽: 재고 부족 알림 (컴팩트) -->
     <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
       <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table>
       <div id="dash-stock-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
   </div>
+  <!-- 이달 청구 현황 (전체 너비) -->
+  <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
+    <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
+    <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
   <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
     <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table>
     <div id="dash-orders-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
@@ -1842,6 +1875,35 @@ async function recalcCustomerOutstanding(cid){
 }
 
 
+/* ── NAVER SEARCH & NEWS WIDGET ────────────────────────────────────────── */
+function naverSearch(e){
+  e.preventDefault();
+  const q=document.getElementById('naver-q').value.trim();
+  if(!q)return;
+  window.open('https://search.naver.com/search.naver?query='+encodeURIComponent(q),'_blank');
+}
+let _newsLoaded=false;
+async function loadNewsWidget(){
+  if(_newsLoaded)return;
+  const R2J='https://api.rss2json.com/v1/api.json?count=6&rss_url=';
+  const NAVER_RSS='https://www.yonhapnews.co.kr/rss/headline.xml';
+  const CNN_RSS='https://rss.cnn.com/rss/edition.rss';
+  const renderList=(elId,items,fallbackUrl)=>{
+    const el=document.getElementById(elId);if(!el)return;
+    if(!items||!items.length){el.innerHTML=`<span style="font-size:11px;color:var(--text3)">불러오기 실패 · <a href="${fallbackUrl}" target="_blank" style="color:var(--accent)">직접 방문</a></span>`;return;}
+    el.innerHTML=items.map(i=>`<a class="news-item" href="${i.link}" target="_blank"><div class="news-item-title">${i.title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')}</div><div class="news-item-date">${(i.pubDate||'').slice(0,10)}</div></a>`).join('');
+  };
+  const [nr,cr]=await Promise.allSettled([
+    fetch(R2J+encodeURIComponent(NAVER_RSS)).then(r=>r.json()).catch(()=>null),
+    fetch(R2J+encodeURIComponent(CNN_RSS)).then(r=>r.json()).catch(()=>null)
+  ]);
+  const nd=nr.status==='fulfilled'?nr.value:null;
+  const cd=cr.status==='fulfilled'?cr.value:null;
+  renderList('naver-news-list',nd?.status==='ok'?nd.items:null,'https://news.naver.com');
+  renderList('cnn-news-list',cd?.status==='ok'?cd.items:null,'https://www.cnn.com');
+  _newsLoaded=true;
+}
+
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
 function renderDash(){
   const mo=thisMO();
@@ -1889,6 +1951,7 @@ function renderDash(){
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">No orders yet</td></tr>';
   renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,"goDashPage('orders',-1)","goDashPage('orders',1)");
+  loadNewsWidget();
 }
 
 /* ── RENDER: INVENTORY ─────────────────────────────────────────────────── */
