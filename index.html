@@ -532,8 +532,8 @@ tr:hover td{background:var(--bg)}
   <div class="below-cal">
     <div class="card"><div class="ch"><div><div class="ce">This Month</div><div class="ck">이달 일정</div></div></div><div id="event-list"></div></div>
     <div class="card"><div class="ch"><div><div class="ce">Important Deadlines</div><div class="ck">주요 행정 일정</div></div></div><div id="admin-deadline-list"></div></div>
-    <div class="card"><div class="ch"><div><div class="ce">Billing Queue</div><div class="ck">월말 청구 예정</div></div></div><div id="billing-queue"></div></div>
   </div>
+  <div class="card"><div class="ch"><div><div class="ce">Billing Queue</div><div class="ck">월말 청구 예정 · 미정산</div></div></div><div id="billing-queue" style="padding:0 4px 8px"></div></div>
 </div>
 
 </div></div>
@@ -2491,7 +2491,7 @@ async function toggleSettled(cid,month,e){
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
-let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0,invOutPage=0,invSetPage=0,calEvPage=0;
+let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0,invOutPage=0,invSetPage=0,calEvPage=0,calBqPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function goDashPage(sec,d){if(sec==='billing')dashBillingPage+=d;else if(sec==='stock')dashStockPage+=d;else if(sec==='orders')dashOrdersPage+=d;renderDash();}
 function goSalesPage(d){salesOrdersPage+=d;renderOrders();}
@@ -2585,9 +2585,10 @@ async function openEditCustomer(id){
 
 /* ── RENDER: CALENDAR ──────────────────────────────────────────────────── */
 function initCal(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
-function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}calEvPage=0;renderCalendar()}
-function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}calEvPage=0;renderCalendar()}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}calEvPage=0;calBqPage=0;renderCalendar()}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}calEvPage=0;calBqPage=0;renderCalendar()}
 function goCalEvPage(d){calEvPage+=d;renderCalendar()}
+function goCalBqPage(d){calBqPage+=d;renderCalendar()}
 /* ── Korean Public Holidays ───────────────────────────────────────────── */
 const KR_FIXED={
   '01-01':'New Year\'s',
@@ -2662,7 +2663,7 @@ function renderCalendar(){
     const holiday=getHoliday(ds);
     const isSun=dow===0;
     const admins=getAdminDeadlines(ds);
-    const devs=mevs.filter(e=>{const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return ds>=e.date&&ds<=end;});
+    const devs=mevs.filter(e=>{if(e.type==='billing')return false;const end=e.dateEnd&&e.dateEnd>=e.date?e.dateEnd:e.date;return ds>=e.date&&ds<=end;});
     const dords=mords.filter(o=>o.date===ds);
     let evH='';
     if(holiday)evH+=`<div class="cal-ev ev-holiday">${holiday}</div>`;
@@ -2717,14 +2718,19 @@ function renderCalendar(){
   const mStr=String(calMonth+1).padStart(2,'0');
   const adminThis=[...KR_ADMIN_HI.map(a=>({...a,hi:true})),...KR_ADMIN_LO.map(a=>({...a,hi:false}))].filter(a=>a.start.slice(0,2)===mStr||a.end.slice(0,2)===mStr);
   document.getElementById('admin-deadline-list').innerHTML=adminThis.length?adminThis.map(a=>`<div class="ev-item"><div class="ev-dot" style="background:${a.hi?'#ff6d00':'#a0632a'}"></div><div><div class="ev-ik" style="${a.hi?'font-weight:700':''}">${a.labelEn}${a.hi?' ★':''}</div><div class="ev-ie">${a.labelKo}</div><div class="ev-id">${ym.slice(0,4)}-${a.start} ~ ${ym.slice(0,4)}-${a.end}</div></div></div>`).join(''):'<div class="empty">No deadlines this month</div>';
-  /* billing queue */
+  /* billing queue — 미정산만, 10/page */
   const bqItems=customers.map(c=>{
     const amt=mords.filter(o=>o.customerId==c.id&&o.payment==='credit').reduce((s,o)=>s+Number(o.charge),0);
     return{c,amt};
   }).filter(({c,amt})=>Number(c.outstanding)>0||amt>0);
-  document.getElementById('billing-queue').innerHTML=bqItems.map(({c,amt})=>
-    `<div class="ev-item"><div class="ev-dot" style="background:var(--amber)"></div><div><div class="ev-ik">${c.name}</div><div class="ev-ie">This month: ${won(amt)}${c.outstanding>0?' · Total due: '+won(c.outstanding):''}</div></div><div class="mono" style="margin-left:auto;color:var(--amber)">${won(c.outstanding||amt)}</div></div>`
-  ).join('')||'<div class="empty">No outstanding balances</div>';
+  const bqPerPage=10;
+  if(calBqPage>=Math.ceil(bqItems.length/bqPerPage))calBqPage=Math.max(0,Math.ceil(bqItems.length/bqPerPage)-1);
+  const bqSlice=bqItems.slice(calBqPage*bqPerPage,(calBqPage+1)*bqPerPage);
+  const bqPages=Math.ceil(bqItems.length/bqPerPage);
+  const bqPager=bqPages>1?`<div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"><button class="btn btn-xs" ${calBqPage===0?'disabled':''} onclick="goCalBqPage(-1)">‹ Prev</button><span style="color:var(--text2)">${calBqPage+1} / ${bqPages}</span><button class="btn btn-xs" ${calBqPage>=bqPages-1?'disabled':''} onclick="goCalBqPage(1)">Next ›</button></div>`:'';
+  document.getElementById('billing-queue').innerHTML=(bqSlice.length?`<table style="width:100%"><thead><tr><th style="text-align:left">Customer</th><th style="text-align:left">This Month</th><th style="text-align:right">Total Outstanding</th><th></th></tr></thead><tbody>`+bqSlice.map(({c,amt})=>
+    `<tr><td><strong>${c.name}</strong></td><td class="mono">${amt>0?won(amt):'—'}</td><td class="mono" style="text-align:right;color:var(--amber)">${won(c.outstanding)}</td><td style="text-align:right"><button class="btn btn-xs btn-p" onclick="showTab('invoices')">Invoice →</button></td></tr>`
+  ).join('')+'</tbody></table>':'<div class="empty">No outstanding balances</div>')+bqPager;
 }
 
 /* ── STAT DETAIL DRILL-DOWN ────────────────────────────────────────────── */
