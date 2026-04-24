@@ -225,6 +225,13 @@ tr:hover td{background:var(--bg)}
 
 /* MISC */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.dash-cal-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.dash-cal-item:last-child{border-bottom:none}
+.dash-cal-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);flex-shrink:0;width:34px;padding-top:1px}
+.dash-cal-date.today{color:var(--accent);font-weight:700}
+.dash-cal-label{font-size:11px;line-height:1.4;color:var(--text)}
+.dash-cal-time{font-size:10px;color:var(--text3)}
 .naver-search-inp{flex:1;padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--text);outline:none}
 .naver-search-inp:focus{border-color:var(--accent)}
 .news-item{display:block;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);cursor:pointer}
@@ -313,7 +320,7 @@ tr:hover td{background:var(--bg)}
   body.print-finance .ph .btn-row{display:none!important}
   body.print-finance .ph{margin-bottom:10mm!important}
 }
-@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.two-col,.below-cal{grid-template-columns:1fr}.nb{padding:5px 7px}.grid3{grid-template-columns:1fr 1fr}.inv-detail-hd,.inv-detail-row{grid-template-columns:70px 1fr 70px 80px}.invoice-doc{padding:24px 20px}.idoc-meta{flex-direction:column}.idoc-meta-item{border-right:none;border-bottom:1px solid #E8E3DB}}
+@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.two-col,.three-col,.below-cal{grid-template-columns:1fr}.nb{padding:5px 7px}.grid3{grid-template-columns:1fr 1fr}.inv-detail-hd,.inv-detail-row{grid-template-columns:70px 1fr 70px 80px}.invoice-doc{padding:24px 20px}.idoc-meta{flex-direction:column}.idoc-meta-item{border-right:none;border-bottom:1px solid #E8E3DB}}
 </style>
 </head>
 <body>
@@ -347,7 +354,7 @@ tr:hover td{background:var(--bg)}
 <div class="sec active" id="tab-dash">
   <div class="ph"><div><div class="pte">Dashboard — Operations Overview</div><div class="ptk">대시보드</div></div><div class="btn-row"><button class="btn" onclick="syncFromSheets()">↻ Sync Sheets</button><button class="btn" onclick="dlAll()">⬇ Download All (.xlsx)</button></div></div>
   <div class="stats" id="dash-stats"></div>
-  <div class="two-col">
+  <div class="three-col">
     <!-- 왼쪽: 네이버 검색 + 뉴스 위젯 -->
     <div class="card">
       <div class="ch"><div><div class="ce">Search &amp; News</div><div class="ck">검색 · 뉴스</div></div></div>
@@ -371,6 +378,11 @@ tr:hover td{background:var(--bg)}
           <div id="cnn-news-list"><span style="font-size:11px;color:var(--text3)">로딩 중...</span></div>
         </div>
       </div>
+    </div>
+    <!-- 중간: 캘린더 주요 일정 -->
+    <div class="card">
+      <div class="ch"><div><div class="ce">Upcoming Events</div><div class="ck">다가오는 일정</div></div><button class="btn btn-xs" onclick="showTab('calendar')">캘린더 →</button></div>
+      <div style="padding:8px 15px 12px" id="dash-cal-events"><span style="font-size:11px;color:var(--text3)">Loading...</span></div>
     </div>
     <!-- 오른쪽: 재고 부족 알림 (컴팩트) -->
     <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
@@ -1885,18 +1897,33 @@ function naverSearch(e){
 let _newsLoaded=false;
 async function loadNewsWidget(){
   if(_newsLoaded)return;
-  const PROXY='https://api.allorigins.win/get?url=';
-  const fetchRSS=async(rssUrl,count=6)=>{
-    const r=await fetch(PROXY+encodeURIComponent(rssUrl));
-    const d=await r.json();
-    const xml=new DOMParser().parseFromString(d.contents,'text/xml');
-    return[...xml.querySelectorAll('item')].slice(0,count).map(it=>{
-      const title=(it.querySelector('title')?.textContent||'').trim();
-      const link=(it.querySelector('link')?.textContent||'').trim()||
-                 (it.querySelector('guid')?.textContent||'').trim();
-      const pubDate=(it.querySelector('pubDate')?.textContent||'').slice(0,10);
-      return{title,link,pubDate};
+  const parseRSS=(text,count)=>{
+    let xmlStr=text;
+    try{const j=JSON.parse(text);if(j.contents)xmlStr=j.contents;}catch{}
+    const xml=new DOMParser().parseFromString(xmlStr,'text/xml');
+    const items=xml.getElementsByTagName('item');
+    if(!items.length)throw new Error('no items');
+    return[...items].slice(0,count).map(it=>{
+      const g=tag=>it.getElementsByTagName(tag)[0]?.textContent?.trim()||'';
+      return{title:g('title'),link:g('link')||g('guid'),pubDate:g('pubDate').slice(0,10)};
     }).filter(i=>i.title&&i.link);
+  };
+  const fetchRSS=async(rssUrl,count=6)=>{
+    const proxies=[
+      `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
+      `https://corsproxy.io/?url=${encodeURIComponent(rssUrl)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`
+    ];
+    for(const url of proxies){
+      try{
+        const r=await fetch(url,{cache:'no-store'});
+        if(!r.ok)continue;
+        const text=await r.text();
+        const items=parseRSS(text,count);
+        if(items.length)return items;
+      }catch{}
+    }
+    return null;
   };
   const renderList=(elId,items,fallbackUrl)=>{
     const el=document.getElementById(elId);if(!el)return;
@@ -1910,6 +1937,32 @@ async function loadNewsWidget(){
   renderList('naver-news-list',nr.status==='fulfilled'?nr.value:null,'https://news.naver.com');
   renderList('cnn-news-list',cr.status==='fulfilled'?cr.value:null,'https://www.cnn.com');
   _newsLoaded=true;
+}
+
+function renderDashCalendar(){
+  const el=document.getElementById('dash-cal-events');if(!el)return;
+  const today=nowDate();
+  const limitD=new Date();limitD.setDate(limitD.getDate()+21);
+  const limit=dStr(limitD);
+  const yms=new Set();
+  for(let i=0;i<=22;i++){const d=new Date();d.setDate(d.getDate()+i);yms.add(dStr(d).slice(0,7));}
+  const seen=new Set();const upcoming=[];
+  for(const ym of yms){
+    for(const ev of expandEventsForMonth(ym)){
+      const key=`${ev.id}-${ev.date}`;
+      if(seen.has(key))continue;seen.add(key);
+      if(ev.date>=today&&ev.date<=limit)upcoming.push(ev);
+    }
+  }
+  upcoming.sort((a,b)=>a.date.localeCompare(b.date));
+  if(!upcoming.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:18px 0">No upcoming events</div>';return;}
+  el.innerHTML=upcoming.slice(0,10).map(ev=>{
+    const label=ev.en||ev.ko||'(no title)';
+    const isToday=ev.date===today;
+    const mm=ev.date.slice(5,7),dd=ev.date.slice(8,10);
+    const timeStr=ev.time?`<div class="dash-cal-time">${ev.time}</div>`:'';
+    return`<div class="dash-cal-item"><div class="dash-cal-date${isToday?' today':''}">${mm}/${dd}</div><div><div class="dash-cal-label">${label}</div>${timeStr}</div></div>`;
+  }).join('');
 }
 
 /* ── RENDER: DASHBOARD ─────────────────────────────────────────────────── */
@@ -1959,6 +2012,7 @@ function renderDash(){
     return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td class="mono">${won(o.charge)}</td><td>${sBadge(o)}</td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">No orders yet</td></tr>';
   renderPager('dash-orders-pager',dashOrdersPage,allRecent.length,perPage,"goDashPage('orders',-1)","goDashPage('orders',1)");
+  renderDashCalendar();
   loadNewsWidget();
 }
 
