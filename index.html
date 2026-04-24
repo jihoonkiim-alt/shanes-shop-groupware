@@ -353,8 +353,8 @@ tr:hover td{background:var(--bg)}
       <div class="ch"><div><div class="ce">Search &amp; News</div><div class="ck">검색 · 뉴스</div></div></div>
       <div style="padding:12px 15px 4px">
         <form onsubmit="naverSearch(event)" style="display:flex;gap:8px;margin-bottom:16px">
-          <input type="text" id="naver-q" class="naver-search-inp" placeholder="네이버 검색...">
-          <button type="submit" class="btn" style="white-space:nowrap;flex-shrink:0">검색</button>
+          <input type="text" id="naver-q" class="naver-search-inp" placeholder="Search Naver...">
+          <button type="submit" class="btn" style="white-space:nowrap;flex-shrink:0">Search</button>
         </form>
         <div style="margin-bottom:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1885,22 +1885,30 @@ function naverSearch(e){
 let _newsLoaded=false;
 async function loadNewsWidget(){
   if(_newsLoaded)return;
-  const R2J='https://api.rss2json.com/v1/api.json?count=6&rss_url=';
-  const NAVER_RSS='https://www.yonhapnews.co.kr/rss/headline.xml';
-  const CNN_RSS='https://rss.cnn.com/rss/edition.rss';
+  const PROXY='https://api.allorigins.win/get?url=';
+  const fetchRSS=async(rssUrl,count=6)=>{
+    const r=await fetch(PROXY+encodeURIComponent(rssUrl));
+    const d=await r.json();
+    const xml=new DOMParser().parseFromString(d.contents,'text/xml');
+    return[...xml.querySelectorAll('item')].slice(0,count).map(it=>{
+      const title=(it.querySelector('title')?.textContent||'').trim();
+      const link=(it.querySelector('link')?.textContent||'').trim()||
+                 (it.querySelector('guid')?.textContent||'').trim();
+      const pubDate=(it.querySelector('pubDate')?.textContent||'').slice(0,10);
+      return{title,link,pubDate};
+    }).filter(i=>i.title&&i.link);
+  };
   const renderList=(elId,items,fallbackUrl)=>{
     const el=document.getElementById(elId);if(!el)return;
-    if(!items||!items.length){el.innerHTML=`<span style="font-size:11px;color:var(--text3)">불러오기 실패 · <a href="${fallbackUrl}" target="_blank" style="color:var(--accent)">직접 방문</a></span>`;return;}
-    el.innerHTML=items.map(i=>`<a class="news-item" href="${i.link}" target="_blank"><div class="news-item-title">${i.title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')}</div><div class="news-item-date">${(i.pubDate||'').slice(0,10)}</div></a>`).join('');
+    if(!items?.length){el.innerHTML=`<span style="font-size:11px;color:var(--text3)">Load failed · <a href="${fallbackUrl}" target="_blank" style="color:var(--accent)">Open site</a></span>`;return;}
+    el.innerHTML=items.map(i=>`<a class="news-item" href="${i.link}" target="_blank"><div class="news-item-title">${i.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><div class="news-item-date">${i.pubDate}</div></a>`).join('');
   };
-  const [nr,cr]=await Promise.allSettled([
-    fetch(R2J+encodeURIComponent(NAVER_RSS)).then(r=>r.json()).catch(()=>null),
-    fetch(R2J+encodeURIComponent(CNN_RSS)).then(r=>r.json()).catch(()=>null)
+  const[nr,cr]=await Promise.allSettled([
+    fetchRSS('https://www.yna.co.kr/rss/news.xml'),
+    fetchRSS('https://rss.cnn.com/rss/edition.rss')
   ]);
-  const nd=nr.status==='fulfilled'?nr.value:null;
-  const cd=cr.status==='fulfilled'?cr.value:null;
-  renderList('naver-news-list',nd?.status==='ok'?nd.items:null,'https://news.naver.com');
-  renderList('cnn-news-list',cd?.status==='ok'?cd.items:null,'https://www.cnn.com');
+  renderList('naver-news-list',nr.status==='fulfilled'?nr.value:null,'https://news.naver.com');
+  renderList('cnn-news-list',cr.status==='fulfilled'?cr.value:null,'https://www.cnn.com');
   _newsLoaded=true;
 }
 
