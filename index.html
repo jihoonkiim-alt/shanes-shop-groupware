@@ -375,10 +375,11 @@ tr:hover td{background:var(--bg)}
   <div class="card"><div class="ch">
     <div><div class="ce">Order List</div><div class="ck">주문 목록</div></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="month-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderOrders()"></select>
-      <select id="type-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="renderOrders()"><option value="">All Types</option><option value="stock">Stock Sale / 재고판매</option><option value="proxy">Proxy / 구매대행</option></select>
+      <select id="month-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="onSalesFilter()"></select>
+      <select id="type-filter" style="font-family:inherit;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:5px 9px;background:var(--surface);color:var(--text)" onchange="onSalesFilter()"><option value="">All Types</option><option value="stock">Stock Sale / 재고판매</option><option value="proxy">Proxy / 구매대행</option></select>
     </div></div>
-    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Platform</span><span class="tk">구매처</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Charged</span><span class="tk">청구액</span></th><th><span class="te">Payment</span><span class="tk">결제</span></th><th><span class="te">Status</span><span class="tk">상태</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="order-table"></tbody></table></div>
+    <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Item</span><span class="tk">내용</span></th><th><span class="te">Type</span><span class="tk">유형</span></th><th><span class="te">Platform</span><span class="tk">구매처</span></th><th><span class="te">Cost</span><span class="tk">원가</span></th><th><span class="te">Charged</span><span class="tk">청구액</span></th><th><span class="te">Payment</span><span class="tk">결제</span></th><th><span class="te">Status</span><span class="tk">상태</span></th><th><span class="te">Action</span><span class="tk">관리</span></th></tr></thead><tbody id="order-table"></tbody></table>
+    <div id="sales-pager" style="justify-content:center;align-items:center;gap:8px;padding:10px 0 2px;font-size:12px"></div></div>
 </div>
 
 <!-- FINANCE & TAX -->
@@ -1812,12 +1813,24 @@ function renderOrders(){
     `<div class="stat" onclick="detSales('billed')"><div class="sk">Total Billed</div><div class="se">청구액 합계</div><div class="sv green">${won(rev)}</div></div>`+
     `<div class="stat" onclick="detSales('cost')"><div class="sk">Total Cost</div><div class="se">원가 합계</div><div class="sv">${won(cost)}</div></div>`+
     `<div class="stat" onclick="detSales('profit')"><div class="sk">Gross Profit</div><div class="se">총 이익</div><div class="sv ${rev-cost>=0?'green':'red'}">${won(rev-cost)}</div></div>`;
-  document.getElementById('order-table').innerHTML=filtered.length?[...filtered].sort((a,b)=>b.date.localeCompare(a.date)).map(o=>{
+  const sorted=[...filtered].sort((a,b)=>b.date.localeCompare(a.date));
+  const sPerPage=25;const sTotal=sorted.length;
+  if(salesOrdersPage>=Math.ceil(sTotal/sPerPage))salesOrdersPage=Math.max(0,Math.ceil(sTotal/sPerPage)-1);
+  const sSlice=sorted.slice(salesOrdersPage*sPerPage,(salesOrdersPage+1)*sPerPage);
+  document.getElementById('order-table').innerHTML=sSlice.length?sSlice.map(o=>{
     const c=getC(o.customerId);
     const totalCost=Number(o.cost||0)+Number(o.shippingCost||0);
-    const actionBtn='';
-    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td><span class="mono">${totalCost>0?won(totalCost):'—'}</span></td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap">${actionBtn}<button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
+    return`<tr><td class="mono">${o.date}</td><td>${c?c.name:'?'}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.desc}</td><td>${tPill(o.type)}</td><td>${platChip(o.platform)}</td><td><span class="mono">${totalCost>0?won(totalCost):'—'}</span></td><td class="mono"><strong>${won(o.charge)}</strong></td><td>${pBadge(o.payment)}</td><td>${sBadge(o)}</td><td style="white-space:nowrap"><button class="btn btn-xs" style="margin-right:3px" onclick="openEditOrder(${o.id})">Edit</button><button class="btn btn-xs btn-d" onclick="deleteOrder(${o.id})">Del</button></td></tr>`;
   }).join(''):'<tr><td colspan="10" class="empty">No orders for this period</td></tr>';
+  const sPages=Math.ceil(sTotal/sPerPage);
+  const sp=document.getElementById('sales-pager');
+  if(sPages>1){
+    sp.style.display='flex';
+    const info=`<span style="color:var(--text2)">${salesOrdersPage*sPerPage+1}–${Math.min((salesOrdersPage+1)*sPerPage,sTotal)} / ${sTotal}건</span>`;
+    const prev=`<button class="btn btn-xs" ${salesOrdersPage===0?'disabled':''} onclick="goSalesPage(-1)">‹ Prev</button>`;
+    const next=`<button class="btn btn-xs" ${salesOrdersPage>=sPages-1?'disabled':''} onclick="goSalesPage(1)">Next ›</button>`;
+    sp.innerHTML=prev+info+next;
+  }else{sp.style.display='none';}
 }
 
 /* ── RENDER: FINANCE ───────────────────────────────────────────────────── */
@@ -2096,9 +2109,11 @@ async function toggleSettled(cid,month,e){
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
-let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0;
+let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function goDashPage(sec,d){if(sec==='billing')dashBillingPage+=d;else if(sec==='stock')dashStockPage+=d;else if(sec==='orders')dashOrdersPage+=d;renderDash();}
+function goSalesPage(d){salesOrdersPage+=d;renderOrders();}
+function onSalesFilter(){salesOrdersPage=0;renderOrders();}
 function renderCustomers(q){
   const mo=thisMO();
   const sort=(document.getElementById('cust-sort')||{}).value||'name';
