@@ -1410,7 +1410,8 @@ async function settleCredit(cid){
   const months=[...new Set(creditOrds.map(o=>o.date?o.date.slice(0,7):null).filter(Boolean))];
   months.forEach(m=>{const key=`${cid}-${m}`;if(!settlements[key])settlements[key]=true;});
   LS.set('settlements',settlements);
-  c.outstanding=0;LS.set('customers',customers);
+  c.settlements=_custSettlementsObj(cid);c.outstanding=0;LS.set('customers',customers);
+  updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid))});
   const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료 ${won(amt)}`,en:`Settlement — ${c.name} ${won(amt)}`,type:'billing'};
   events.push(ev);LS.set('events',events);
   toast('✓ Settlement recorded');renderCustomers('');renderInvoices();
