@@ -356,13 +356,13 @@ tr:hover td{background:var(--bg)}
   <div class="stats" id="dash-stats"></div>
   <!-- Row 1: 3컬럼 — 이달 청구 / 최근 주문 / 재고 부족 -->
   <div class="three-col">
-    <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Monthly Billing Status</div><div class="ck">이달 청구 현황</div></div><button class="btn btn-xs" onclick="showTab('invoices')">인보이스 →</button></div>
       <table><thead><tr><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Billed</span><span class="tk">청구액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-billing"></tbody></table>
       <div id="dash-billing-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
-    <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Recent Orders</div><div class="ck">최근 주문</div></div><button class="btn btn-xs" onclick="showTab('sales')">매출·청구 →</button></div>
       <table><thead><tr><th><span class="te">Date</span><span class="tk">일자</span></th><th><span class="te">Customer</span><span class="tk">고객</span></th><th><span class="te">Amount</span><span class="tk">금액</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-orders"></tbody></table>
       <div id="dash-orders-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
-    <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Low Stock Alerts</div><div class="ck">재고 부족 알림</div></div><button class="btn btn-xs" onclick="showTab('inventory')">재고 →</button></div>
       <table><thead><tr><th><span class="te">Product</span><span class="tk">상품명</span></th><th><span class="te">Stock</span><span class="tk">현재고</span></th><th><span class="te">Status</span><span class="tk">상태</span></th></tr></thead><tbody id="dash-stock"></tbody></table>
       <div id="dash-stock-pager" style="justify-content:center;align-items:center;gap:8px;padding:8px 0 2px;font-size:12px"></div></div>
   </div>
@@ -1991,7 +1991,7 @@ function renderDash(){
     const isSettled=!!settlements[`${c.id}-${dashMonth}`];
     return{html:`<tr><td><strong>${c.name}</strong></td><td class="mono">${won(amt)}</td><td>${isSettled?'<span class="badge bg-green"><span class="bk">Settled</span><span class="be">정산완료</span></span>':'<span class="badge bg-amber"><span class="bk">Outstanding</span><span class="be">미정산</span></span>'}</td></tr>`};
   }).filter(Boolean);
-  const bPerPage=10;
+  const bPerPage=5;
   if(dashBillingPage>=Math.ceil(billingRows.length/bPerPage))dashBillingPage=Math.max(0,Math.ceil(billingRows.length/bPerPage)-1);
   const bSlice=billingRows.slice(dashBillingPage*bPerPage,(dashBillingPage+1)*bPerPage);
   document.getElementById('dash-billing').innerHTML=bSlice.length?bSlice.map(r=>r.html).join(''):'<tr><td colspan="3" class="empty">No billing this month</td></tr>';
@@ -2002,7 +2002,7 @@ function renderDash(){
     else{p.style.display='none';}
   }
   renderPager('dash-billing-pager',dashBillingPage,billingRows.length,bPerPage,"goDashPage('billing',-1)","goDashPage('billing',1)");
-  const perPage=10;
+  const perPage=5;
   if(dashStockPage>=Math.ceil(ls.length/perPage))dashStockPage=Math.max(0,Math.ceil(ls.length/perPage)-1);
   const lsSlice=ls.slice(dashStockPage*perPage,(dashStockPage+1)*perPage);
   document.getElementById('dash-stock').innerHTML=lsSlice.length?lsSlice.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.stock}</td><td>${p.stock==0?'<span class="badge bg-red"><span class="bk">Out</span><span class="be">재고없음</span></span>':'<span class="badge bg-amber"><span class="bk">Low</span><span class="be">부족</span></span>'}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">All stock levels OK</td></tr>';
