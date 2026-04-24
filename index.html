@@ -2491,7 +2491,7 @@ async function toggleSettled(cid,month,e){
 }
 
 /* ── RENDER: CUSTOMERS ─────────────────────────────────────────────────── */
-let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0,invOutPage=0,invSetPage=0;
+let custPage=0,dashBillingPage=0,dashStockPage=0,dashOrdersPage=0,salesOrdersPage=0,invOutPage=0,invSetPage=0,calEvPage=0;
 function changeCustPage(p){custPage=p;renderCustomers((document.getElementById('cust-search')||{}).value||'');}
 function goDashPage(sec,d){if(sec==='billing')dashBillingPage+=d;else if(sec==='stock')dashStockPage+=d;else if(sec==='orders')dashOrdersPage+=d;renderDash();}
 function goSalesPage(d){salesOrdersPage+=d;renderOrders();}
@@ -2585,8 +2585,9 @@ async function openEditCustomer(id){
 
 /* ── RENDER: CALENDAR ──────────────────────────────────────────────────── */
 function initCal(){const n=new Date();calYear=n.getFullYear();calMonth=n.getMonth()}
-function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()}
-function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()}
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--}calEvPage=0;renderCalendar()}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++}calEvPage=0;renderCalendar()}
+function goCalEvPage(d){calEvPage+=d;renderCalendar()}
 /* ── Korean Public Holidays ───────────────────────────────────────────── */
 const KR_FIXED={
   '01-01':'New Year\'s',
@@ -2701,12 +2702,17 @@ function renderCalendar(){
   const dc={billing:'var(--amber)',order:'var(--purple)',note:'var(--blue)',personal:'#2e7d32'};
   const recurLblList={daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년'};
   const seenIds=new Set();
-  const userEvs=mevs.filter(e=>{if(seenIds.has(e.id))return false;seenIds.add(e.id);return true;});
-  document.getElementById('event-list').innerHTML=userEvs.length?[...userEvs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{
+  const userEvs=mevs.filter(e=>{if(seenIds.has(e.id))return false;seenIds.add(e.id);return e.type!=='billing';}).sort((a,b)=>a.date.localeCompare(b.date));
+  const evPerPage=5;
+  if(calEvPage>=Math.ceil(userEvs.length/evPerPage))calEvPage=Math.max(0,Math.ceil(userEvs.length/evPerPage)-1);
+  const evSlice=userEvs.slice(calEvPage*evPerPage,(calEvPage+1)*evPerPage);
+  const evPages=Math.ceil(userEvs.length/evPerPage);
+  const evPager=evPages>1?`<div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0 2px;font-size:12px"><button class="btn btn-xs" ${calEvPage===0?'disabled':''} onclick="goCalEvPage(-1)">‹ Prev</button><span style="color:var(--text2)">${calEvPage+1} / ${evPages}</span><button class="btn btn-xs" ${calEvPage>=evPages-1?'disabled':''} onclick="goCalEvPage(1)">Next ›</button></div>`:'';
+  document.getElementById('event-list').innerHTML=(evSlice.length?evSlice.map(e=>{
     const dateRange=e.dateEnd&&e.dateEnd!==e.date?e.date+' ~ '+e.dateEnd:e.date;
     const rb=e.recur&&e.recur!=='none'?' · ↺ '+recurLblList[e.recur]:'';
     return `<div class="ev-item"><div class="ev-dot" style="background:${dc[e.type]||'var(--blue)'}"></div><div><div class="ev-ik">${e.en||e.ko}</div><div class="ev-ie">${e.ko||''}</div><div class="ev-id">${dateRange}${e.time?' · '+e.time:''}${rb}</div></div><button class="btn btn-xs btn-d" style="margin-left:auto" onclick="deleteEvent(${e.id})">✕</button></div>`;
-  }).join(''):'<div class="empty">No events this month</div>';
+  }).join(''):'<div class="empty">No events this month</div>')+evPager;
   /* important admin deadlines this month */
   const mStr=String(calMonth+1).padStart(2,'0');
   const adminThis=[...KR_ADMIN_HI.map(a=>({...a,hi:true})),...KR_ADMIN_LO.map(a=>({...a,hi:false}))].filter(a=>a.start.slice(0,2)===mStr||a.end.slice(0,2)===mStr);
