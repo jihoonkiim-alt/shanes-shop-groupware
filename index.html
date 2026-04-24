@@ -1955,6 +1955,7 @@ function renderDashCalendar(){
     for(const ev of expandEventsForMonth(ym)){
       const key=`${ev.id}-${ev.date}`;
       if(seen.has(key))continue;seen.add(key);
+      if(ev.type==='billing')continue;
       if(ev.date>=today&&ev.date<=limit)upcoming.push(ev);
     }
   }
