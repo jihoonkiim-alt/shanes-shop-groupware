@@ -2294,8 +2294,10 @@ function renderInvoices(){
     const total=cOrders.reduce((s,o)=>s+Number(o.charge),0);
     const extraAmt=invExtras[key]||0;
     const grandAmt=total+cOrders.reduce((s,o)=>s+Number(o.shippingCost||0),0)+extraAmt;
+    const cb=settled?'':`<input type="checkbox" class="inv-bulk-cb" data-cid="${c.id}" onclick="event.stopPropagation();onInvCbChange()" style="width:15px;height:15px;cursor:pointer;margin-right:10px;flex-shrink:0;accent-color:var(--accent)">`;
     return`<div class="inv-card${settled?' inv-settled':''}" onclick="openInvoiceModal(${c.id})" style="cursor:pointer">
       <div class="inv-head">
+        ${cb}
         <div style="flex:1">
           <div class="inv-name">${c.name}</div>
           <div class="inv-meta">${cOrders.length} order${cOrders.length>1?'s':''} · ${c.contact||''}</div>
@@ -2326,7 +2328,11 @@ function renderInvoices(){
   let html='';
   if(!custWithOrders.length){html='<div class="empty" style="padding:40px">No orders recorded for this month</div>';}
   else{
-    if(outstanding.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;padding:8px 2px 4px">OUTSTANDING · 미정산 (${outstanding.length})</div>`+outSlice.map(({c,cOrders})=>makeCard(c,cOrders)).join('')+invPagerHtml(outstanding,invOutPage,'out');
+    if(outstanding.length)html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 4px">
+        <input type="checkbox" id="inv-select-all" onclick="invSelectAll(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent);flex-shrink:0" title="Select All">
+        <span style="font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.5px;flex:1">OUTSTANDING · ${outstanding.length} customer${outstanding.length>1?'s':''}</span>
+        <button class="btn btn-p btn-xs" id="inv-bulk-btn" style="display:none;white-space:nowrap" onclick="bulkSettleSelected()">✓ Bulk Settle</button>
+      </div>`+outSlice.map(({c,cOrders})=>makeCard(c,cOrders)).join('')+invPagerHtml(outstanding,invOutPage,'out');
     if(settled.length)html+=`<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;padding:${outstanding.length?16:8}px 2px 4px">SETTLED · 정산완료 (${settled.length})</div>`+setSlice.map(({c,cOrders})=>makeCard(c,cOrders)).join('')+invPagerHtml(settled,invSetPage,'set');
   }
   document.getElementById('invoice-list').innerHTML=html;
@@ -2432,6 +2438,41 @@ async function saveInvoiceExtra(cid,month,base){
   calcInvTotal(base);
   toast('✓ 추가금액 저장됨');
   renderInvoices();
+}
+function onInvCbChange(){
+  const cbs=document.querySelectorAll('.inv-bulk-cb');
+  const checked=document.querySelectorAll('.inv-bulk-cb:checked');
+  const allCb=document.getElementById('inv-select-all');
+  const btn=document.getElementById('inv-bulk-btn');
+  if(allCb)allCb.indeterminate=checked.length>0&&checked.length<cbs.length,allCb.checked=checked.length===cbs.length;
+  if(btn)btn.style.display=checked.length>0?'':'none';
+  if(btn&&checked.length>0)btn.textContent=`✓ Bulk Settle (${checked.length})`;
+}
+function invSelectAll(cb){
+  document.querySelectorAll('.inv-bulk-cb').forEach(el=>el.checked=cb.checked);
+  onInvCbChange();
+}
+async function bulkSettleSelected(){
+  const month=document.getElementById('inv-month')?.value||nowYM();
+  const checked=[...document.querySelectorAll('.inv-bulk-cb:checked')];
+  if(!checked.length)return;
+  const cids=checked.map(el=>Number(el.dataset.cid));
+  const names=cids.map(cid=>getC(cid)?.name||cid).join(', ');
+  if(!confirm(`Settle ${cids.length} customer${cids.length>1?'s':''}?\n${names}`))return;
+  for(const cid of cids){
+    const c=getC(cid);if(!c)continue;
+    const creditOrds=orders.filter(o=>String(o.customerId)===String(cid)&&o.payment==='credit');
+    const months=[...new Set(creditOrds.map(o=>o.date?o.date.slice(0,7):null).filter(Boolean))];
+    months.forEach(m=>{const key=`${cid}-${m}`;if(!settlements[key])settlements[key]=true;});
+    c.settlements=_custSettlementsObj(cid);c.outstanding=0;
+    await updateRow('Customers',cid,{settlements:JSON.stringify(_custSettlementsObj(cid)),outstanding:0});
+    const ev={id:newId(events),date:nowDate(),ko:`${c.name} 정산완료`,en:`Settlement — ${c.name}`,type:'billing'};
+    events.push(ev);
+    pushRow('Events',{id:ev.id,date:ev.date,dateEnd:ev.date,ko:ev.ko,en:ev.en,type:ev.type,time:'',recur:'none'});
+  }
+  LS.set('settlements',settlements);LS.set('customers',customers);LS.set('events',events);
+  toast(`✓ ${cids.length} customer${cids.length>1?'s':''} settled`);
+  renderCustomers('');renderInvoices();renderDash();
 }
 async function toggleSettled(cid,month,e){
   e.stopPropagation();
