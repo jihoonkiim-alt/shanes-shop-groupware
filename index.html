@@ -761,6 +761,7 @@ tr:hover td{background:var(--bg)}
           </optgroup>
           <optgroup label="── 인건비">
             <option value="labor_owner">대표자 인건비 (본인 급여)</option>
+            <option value="labor_staff">직원 급여·4대보험</option>
           </optgroup>
           <optgroup label="── 임차·시설">
             <option value="rent">임차료 (사무실·창고·보증금이자)</option>
@@ -1085,7 +1086,7 @@ function platChip(pl){
 function expTypeBadge(t){
   const cl={
     shipping:'bg-blue',packaging:'bg-blue',fee_platform:'bg-blue',fee_pg:'bg-blue',ad:'bg-blue',
-    labor_owner:'bg-purple',
+    labor_owner:'bg-purple',labor_staff:'bg-purple',
     rent:'bg-green',utility:'bg-green',comms:'bg-green',
     vehicle:'bg-amber',travel:'bg-amber',meal:'bg-amber',
     tax_vat:'bg-red',tax_income:'bg-red',tax_local:'bg-red',
@@ -1575,7 +1576,7 @@ function onExpTypeChange(){
 }
 const EXP_TYPE_LABEL={
   shipping:'배송비',packaging:'포장재비',fee_platform:'플랫폼 수수료',fee_pg:'결제 수수료',
-  ad:'광고·홍보비',labor_owner:'대표자 인건비',
+  ad:'광고·홍보비',labor_owner:'대표자 인건비',labor_staff:'직원 급여·4대보험',
   rent:'임차료',utility:'수도광열비',comms:'통신비',
   vehicle:'차량유지비',travel:'출장비',meal:'식대·접대비',
   tax_vat:'부가세 납부',tax_income:'종합소득세',tax_local:'지방세·공과금',
