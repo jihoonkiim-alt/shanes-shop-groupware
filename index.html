@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='white'/><path d='M 33 50 A 84 84 0 0 1 167 50' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/><path d='M 167 150 A 84 84 0 0 1 33 150' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/><text x='100' y='112' font-family='Arial Black,Helvetica Neue,Arial,sans-serif' font-weight='900' font-size='28' text-anchor='middle' fill='black'>SELECTLY</text><text x='100' y='134' font-family='cursive,Georgia,serif' font-size='13' text-anchor='middle' fill='black'>Seoul finds by Roshane</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -451,6 +452,13 @@ tr:hover td{background:var(--bg)}
   <div class="card" style="margin-bottom:14px">
     <div class="ch"><div><div class="ce">Monthly P&amp;L — 월별 손익계산서</div><div class="ck">매월 매출 · 원가 · 경비 · 순이익 내역</div></div></div>
     <table><thead><tr><th>월</th><th style="text-align:right">매출</th><th style="text-align:right">원가+배송</th><th style="text-align:right">경비</th><th style="text-align:right">순이익</th><th style="text-align:right">누계</th></tr></thead><tbody id="fin-monthly"></tbody></table>
+  </div>
+  <!-- 차트 -->
+  <div class="two-col" style="margin-bottom:14px">
+    <div class="card"><div class="ch"><div><div class="ce">Monthly Revenue &amp; Profit</div><div class="ck">월별 매출 · 순이익</div></div></div>
+      <div style="padding:14px 16px"><canvas id="fin-chart-monthly"></canvas></div></div>
+    <div class="card"><div class="ch"><div><div class="ce">Cumulative Revenue</div><div class="ck">연간 누적 매출</div></div></div>
+      <div style="padding:14px 16px"><canvas id="fin-chart-cumul"></canvas></div></div>
   </div>
   <!-- 부가세 + 종소세 -->
   <div class="two-col" style="margin-bottom:14px">
@@ -2145,14 +2153,16 @@ function renderFinance(){
 
   /* ── 월별 손익표 ── */
   let cum=0,mRows='';
+  const chartRev=[],chartProfit=[],chartCumRev=[];let cumulRev=0;
   for(let m=1;m<=12;m++){
     const ym=`${year}-${String(m).padStart(2,'0')}`;
     const mO=orders.filter(o=>o.date&&o.date.startsWith(ym));
     const mE=expenses.filter(e=>e.date&&e.date.startsWith(ym));
-    const r=mO.reduce((s,o)=>s+Number(o.charge),0);
+    const r=mO.reduce((s,o)=>s+Number(o.charge),0)+extraRevForPeriod(ym);
     const c=mO.reduce((s,o)=>s+Number(o.cost||0)+Number(o.shippingCost||0),0);
     const ex=mE.reduce((s,e)=>s+Number(e.amount),0);
-    const n=r-c-ex;cum+=n;
+    const n=r-c-ex;cum+=n;cumulRev+=r;
+    chartRev.push(r);chartProfit.push(n);chartCumRev.push(cumulRev);
     const has=r||c||ex;
     const nc=`font-family:'DM Mono',monospace;text-align:right`;
     mRows+=`<tr${!has?' style="opacity:.35"':''}>
@@ -2166,6 +2176,15 @@ function renderFinance(){
   }
   mRows+=`<tr class="fin-yr-total"><td><strong>합 계</strong></td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--green)">${won(annRev)}</td><td style="font-family:'DM Mono',monospace;text-align:right">${won(annCogs+annShip)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--amber)">${won(annExp)}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:${annProfit>=0?'var(--green)':'var(--red)'}">${won(annProfit)}</td><td></td></tr>`;
   document.getElementById('fin-monthly').innerHTML=mRows;
+
+  /* ── 차트 ── */
+  if(window._finCharts){Object.values(window._finCharts).forEach(c=>c.destroy());}
+  window._finCharts={};
+  const labels=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const mc=document.getElementById('fin-chart-monthly');
+  if(mc){window._finCharts.monthly=new Chart(mc,{type:'bar',data:{labels,datasets:[{label:'Revenue',data:chartRev,backgroundColor:'rgba(42,122,79,.7)',borderRadius:4},{label:'Net Profit',data:chartProfit,backgroundColor:chartProfit.map(v=>v>=0?'rgba(42,100,160,.7)':'rgba(192,57,43,.7)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{ticks:{callback:v=>Math.abs(v)>=10000?Math.round(v/10000)+'만':v}}}}})}
+  const cc=document.getElementById('fin-chart-cumul');
+  if(cc){window._finCharts.cumul=new Chart(cc,{type:'line',data:{labels,datasets:[{label:'Cumulative Revenue',data:chartCumRev,borderColor:'rgba(42,122,79,1)',backgroundColor:'rgba(42,122,79,.1)',fill:true,tension:.3,pointRadius:3}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{ticks:{callback:v=>Math.abs(v)>=10000?Math.round(v/10000)+'만':v}}}}})}
 
   /* ── 부가세 참고자료 ── */
   const vatPeriods=[{q:'1기',label:'상반기 (1~6월)',mm:['01','02','03','04','05','06']},{q:'2기',label:'하반기 (7~12월)',mm:['07','08','09','10','11','12']}];
